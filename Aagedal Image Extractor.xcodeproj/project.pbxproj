@@ -6,6 +6,10 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		8ECA9D642F3CAD68000D726E /* JxlCoder in Frameworks */ = {isa = PBXBuildFile; productRef = 8ECA9D502F3B6900000D726E /* JxlCoder */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXFileReference section */
 		8ECA9D322F3B68B7000D726E /* Aagedal Image Extractor.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Aagedal Image Extractor.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
@@ -23,6 +27,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				8ECA9D642F3CAD68000D726E /* JxlCoder in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -65,6 +70,7 @@
 			);
 			name = "Aagedal Image Extractor";
 			packageProductDependencies = (
+				8ECA9D502F3B6900000D726E /* JxlCoder */,
 			);
 			productName = "Aagedal Image Extractor";
 			productReference = 8ECA9D322F3B68B7000D726E /* Aagedal Image Extractor.app */;
@@ -94,6 +100,9 @@
 			);
 			mainGroup = 8ECA9D292F3B68B7000D726E;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				8ECA9D4F2F3B6900000D726E /* XCRemoteSwiftPackageReference "jxl-coder-swift" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 8ECA9D332F3B68B7000D726E /* Products */;
 			projectDirPath = "";
@@ -179,7 +188,7 @@
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
-				MACOSX_DEPLOYMENT_TARGET = 26.0;
+				MACOSX_DEPLOYMENT_TARGET = 15.0;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
@@ -237,7 +246,7 @@
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
-				MACOSX_DEPLOYMENT_TARGET = 26.0;
+				MACOSX_DEPLOYMENT_TARGET = 15.0;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				SDKROOT = macosx;
@@ -250,14 +259,14 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = "Aagedal Image Extractor/Aagedal Image Extractor.entitlements";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 3R5QGG9DW6;
-				ENABLE_APP_SANDBOX = YES;
+				ENABLE_APP_SANDBOX = NO;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
-				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -282,14 +291,14 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = "Aagedal Image Extractor/Aagedal Image Extractor.entitlements";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 3R5QGG9DW6;
-				ENABLE_APP_SANDBOX = YES;
+				ENABLE_APP_SANDBOX = NO;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
-				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -331,6 +340,25 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		8ECA9D4F2F3B6900000D726E /* XCRemoteSwiftPackageReference "jxl-coder-swift" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/awxkee/jxl-coder-swift";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 1.7.1;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		8ECA9D502F3B6900000D726E /* JxlCoder */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 8ECA9D4F2F3B6900000D726E /* XCRemoteSwiftPackageReference "jxl-coder-swift" */;
+			productName = JxlCoder;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 8ECA9D2A2F3B68B7000D726E /* Project object */;
 }

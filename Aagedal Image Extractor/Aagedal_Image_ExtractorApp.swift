@@ -1,17 +1,13 @@
-//
-//  Aagedal_Image_ExtractorApp.swift
-//  Aagedal Image Extractor
-//
-//  Created by Truls Aagedal on 10/02/2026.
-//
-
 import SwiftUI
 
 @main
 struct Aagedal_Image_ExtractorApp: App {
+    @State private var viewModel = DocumentListViewModel()
+
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            ContentView(viewModel: viewModel)
         }
+        .defaultSize(width: 700, height: 500)
     }
 }
