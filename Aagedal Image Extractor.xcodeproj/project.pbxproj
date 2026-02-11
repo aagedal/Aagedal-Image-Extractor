@@ -8,10 +8,12 @@
 
 /* Begin PBXBuildFile section */
 		8ECA9D642F3CAD68000D726E /* JxlCoder in Frameworks */ = {isa = PBXBuildFile; productRef = 8ECA9D502F3B6900000D726E /* JxlCoder */; };
+		8ECA9DA32F3D205F000D726E /* readme.md in Resources */ = {isa = PBXBuildFile; fileRef = 8ECA9DA22F3D205F000D726E /* readme.md */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
 		8ECA9D322F3B68B7000D726E /* Aagedal Image Extractor.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Aagedal Image Extractor.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		8ECA9DA22F3D205F000D726E /* readme.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = readme.md; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -37,6 +39,7 @@
 		8ECA9D292F3B68B7000D726E = {
 			isa = PBXGroup;
 			children = (
+				8ECA9DA22F3D205F000D726E /* readme.md */,
 				8ECA9D342F3B68B7000D726E /* Aagedal Image Extractor */,
 				8ECA9D332F3B68B7000D726E /* Products */,
 			);
@@ -118,6 +121,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				8ECA9DA32F3D205F000D726E /* readme.md in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
