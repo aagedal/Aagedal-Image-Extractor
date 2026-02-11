@@ -5,6 +5,9 @@ enum ExportFormat: String, CaseIterable {
     case tiff
     case jpegXL
 
+    /// Cases currently exposed in the UI (JPEG XL temporarily hidden).
+    static let availableCases: [ExportFormat] = [.jpeg, .tiff]
+
     var displayName: String {
         switch self {
         case .jpeg: "JPEG"

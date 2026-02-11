@@ -9,5 +9,9 @@ struct Aagedal_Image_ExtractorApp: App {
             ContentView(viewModel: viewModel)
         }
         .defaultSize(width: 700, height: 500)
+
+        Settings {
+            SettingsView(viewModel: viewModel)
+        }
     }
 }

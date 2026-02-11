@@ -9,6 +9,8 @@ enum AppError: LocalizedError {
     case ocrFailed(String)
     case fileAccessDenied(String)
     case outputDirectoryCreationFailed(String)
+    case metadataWriteFailed(String)
+    case exiftoolNotFound
 
     var errorDescription: String? {
         switch self {
@@ -28,6 +30,10 @@ enum AppError: LocalizedError {
             "Cannot access file: \(path)"
         case .outputDirectoryCreationFailed(let path):
             "Cannot create output directory: \(path)"
+        case .metadataWriteFailed(let detail):
+            "Metadata write failed: \(detail)"
+        case .exiftoolNotFound:
+            "exiftool not found. Install via Homebrew: brew install exiftool"
         }
     }
 }
