@@ -63,6 +63,7 @@
 				8ECA9D2E2F3B68B7000D726E /* Sources */,
 				8ECA9D2F2F3B68B7000D726E /* Frameworks */,
 				8ECA9D302F3B68B7000D726E /* Resources */,
+				8ECA9DB02F3D3000000D726E /* Bundle External Tools */,
 			);
 			buildRules = (
 			);
@@ -127,6 +128,24 @@
 		};
 /* End PBXResourcesBuildPhase section */
 
+/* Begin PBXShellScriptBuildPhase section */
+		8ECA9DB02F3D3000000D726E /* Bundle External Tools */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+			);
+			name = "Bundle External Tools";
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/bash;
+			shellScript = "\"${SRCROOT}/Scripts/bundle-tools.sh\"\n";
+		};
+/* End PBXShellScriptBuildPhase section */
+
 /* Begin PBXSourcesBuildPhase section */
 		8ECA9D2E2F3B68B7000D726E /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
@@ -176,7 +195,7 @@
 				DEVELOPMENT_TEAM = 3R5QGG9DW6;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
-				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				GCC_C_LANGUAGE_STANDARD = gnu17;
 				GCC_DYNAMIC_NO_PIC = NO;
 				GCC_NO_COMMON_BLOCKS = YES;
@@ -240,7 +259,7 @@
 				DEVELOPMENT_TEAM = 3R5QGG9DW6;
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
-				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				GCC_C_LANGUAGE_STANDARD = gnu17;
 				GCC_NO_COMMON_BLOCKS = YES;
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;

@@ -7,14 +7,14 @@ struct SetupGuideView: View {
     var body: some View {
         VStack(spacing: 24) {
             VStack(spacing: 8) {
-                Image(systemName: "wrench.and.screwdriver")
+                Image(systemName: "exclamationmark.triangle")
                     .font(.system(size: 40))
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(.orange)
 
-                Text("Setup Required")
+                Text("pdfimages Not Found")
                     .font(.title2.bold())
 
-                Text("PDF image extraction requires **pdfimages** from the Poppler package.")
+                Text("The bundled **pdfimages** tool could not be located. This is needed for PDF image extraction.")
                     .font(.body)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
@@ -22,8 +22,8 @@ struct SetupGuideView: View {
             }
 
             VStack(alignment: .leading, spacing: 20) {
-                homebrewStep
-                popplerStep
+                reinstallStep
+                homebrewFallbackStep
             }
             .padding()
             .background(.background.secondary)
@@ -48,75 +48,38 @@ struct SetupGuideView: View {
         .padding()
     }
 
-    // MARK: - Step 1: Homebrew
+    // MARK: - Step 1: Reinstall
 
     @ViewBuilder
-    private var homebrewStep: some View {
-        StepRow(number: 1, title: "Install Homebrew", isComplete: viewModel.homebrewInstalled) {
-            if viewModel.homebrewInstalled {
-                Label("Homebrew is installed", systemImage: "checkmark.circle.fill")
-                    .foregroundStyle(.green)
-                    .font(.callout)
-            } else {
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Paste this command in Terminal:")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-
-                    HStack {
-                        Text(HomebrewService.installCommand)
-                            .font(.system(.caption2, design: .monospaced))
-                            .lineLimit(2)
-                            .textSelection(.enabled)
-
-                        Spacer()
-
-                        Button {
-                            NSPasteboard.general.clearContents()
-                            NSPasteboard.general.setString(
-                                HomebrewService.installCommand, forType: .string
-                            )
-                        } label: {
-                            Image(systemName: "doc.on.doc")
-                        }
-                        .buttonStyle(.borderless)
-                        .help("Copy to clipboard")
-                    }
-                    .padding(8)
-                    .background(.quaternary)
-                    .clipShape(RoundedRectangle(cornerRadius: 6))
-
-                    Button("Open Terminal") {
-                        NSWorkspace.shared.open(
-                            URL(fileURLWithPath: "/System/Applications/Utilities/Terminal.app")
-                        )
-                    }
-                    .buttonStyle(.bordered)
-                    .controlSize(.small)
-                }
-            }
-        }
-    }
-
-    // MARK: - Step 2: Poppler
-
-    @ViewBuilder
-    private var popplerStep: some View {
-        StepRow(number: 2, title: "Install Poppler", isComplete: viewModel.pdfimagesAvailable) {
+    private var reinstallStep: some View {
+        StepRow(number: 1, title: "Reinstall the Application", isComplete: viewModel.pdfimagesAvailable) {
             if viewModel.pdfimagesAvailable {
                 Label("pdfimages is available", systemImage: "checkmark.circle.fill")
                     .foregroundStyle(.green)
                     .font(.callout)
-            } else if !viewModel.homebrewInstalled {
-                Text("Complete step 1 first")
+            } else {
+                Text("Download and reinstall Aagedal Image Extractor to restore the bundled tools.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
+            }
+        }
+    }
+
+    // MARK: - Step 2: Homebrew Fallback
+
+    @ViewBuilder
+    private var homebrewFallbackStep: some View {
+        StepRow(number: 2, title: "Or Install via Homebrew", isComplete: viewModel.pdfimagesAvailable) {
+            if viewModel.pdfimagesAvailable {
+                Label("pdfimages is available", systemImage: "checkmark.circle.fill")
+                    .foregroundStyle(.green)
+                    .font(.callout)
             } else if viewModel.isInstallingPoppler {
                 VStack(alignment: .leading, spacing: 4) {
                     HStack(spacing: 8) {
                         ProgressView()
                             .controlSize(.small)
-                        Text("Installing poppler…")
+                        Text("Installing poppler...")
                             .font(.callout)
                             .foregroundStyle(.secondary)
                     }
@@ -126,11 +89,22 @@ struct SetupGuideView: View {
                 }
             } else {
                 VStack(alignment: .leading, spacing: 8) {
+                    Text("Alternatively, install via Homebrew:")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+
                     Button("Install Poppler") {
                         Task { await viewModel.installPoppler() }
                     }
                     .buttonStyle(.borderedProminent)
                     .controlSize(.small)
+                    .disabled(!viewModel.homebrewInstalled)
+
+                    if !viewModel.homebrewInstalled {
+                        Text("Requires Homebrew — visit brew.sh to install it first.")
+                            .font(.caption)
+                            .foregroundStyle(.tertiary)
+                    }
 
                     if let error = viewModel.installError {
                         Text(error)

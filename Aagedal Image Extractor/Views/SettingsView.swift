@@ -6,6 +6,51 @@ struct SettingsView: View {
 
     var body: some View {
         Form {
+            Section("Output Location") {
+                Picker("Destination", selection: $viewModel.outputDestination) {
+                    ForEach(OutputDestination.allCases, id: \.self) { destination in
+                        Text(destination.displayName).tag(destination)
+                    }
+                }
+                .pickerStyle(.segmented)
+
+                if viewModel.outputDestination == .customDirectory {
+                    HStack {
+                        if let url = viewModel.customOutputDirectoryURL {
+                            Image(systemName: "folder.fill")
+                                .foregroundStyle(.secondary)
+                            Text(url.path(percentEncoded: false))
+                                .font(.callout)
+                                .foregroundStyle(.secondary)
+                                .lineLimit(1)
+                                .truncationMode(.middle)
+                        } else {
+                            Image(systemName: "folder")
+                                .foregroundStyle(.secondary)
+                            Text("No folder selected")
+                                .font(.callout)
+                                .foregroundStyle(.tertiary)
+                        }
+
+                        Spacer()
+
+                        Button("Choose\u{2026}") {
+                            let panel = NSOpenPanel()
+                            panel.canChooseDirectories = true
+                            panel.canChooseFiles = false
+                            panel.allowsMultipleSelection = false
+                            panel.prompt = "Select"
+                            if panel.runModal() == .OK {
+                                viewModel.customOutputDirectoryURL = panel.url
+                                viewModel.saveOutputDestination()
+                            }
+                        }
+                        .buttonStyle(.bordered)
+                        .controlSize(.small)
+                    }
+                }
+            }
+
             Section("Export Format") {
                 Picker("Format", selection: $viewModel.selectedFormat) {
                     ForEach(ExportFormat.availableCases, id: \.self) { format in
@@ -16,175 +61,133 @@ struct SettingsView: View {
             }
 
             Section("Dependencies") {
-                homebrewStep
-                popplerStep
-                exiftoolStep
+                toolRow(
+                    name: "pdfimages",
+                    url: viewModel.pdfimagesURL,
+                    purpose: "PDF image extraction",
+                    bundledAvailable: viewModel.pdfimagesBundledAvailable,
+                    homebrewAvailable: viewModel.pdfimagesHomebrewAvailable
+                )
+                toolRow(
+                    name: "exiftool",
+                    url: viewModel.exiftoolURL,
+                    purpose: "IPTC metadata writing",
+                    bundledAvailable: viewModel.exiftoolBundledAvailable,
+                    homebrewAvailable: viewModel.exiftoolHomebrewAvailable
+                )
 
                 Button("Refresh Status") {
                     viewModel.refreshDependencies()
                 }
                 .buttonStyle(.bordered)
                 .controlSize(.small)
+
+                DisclosureGroup("Advanced: Override with Homebrew") {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Install newer versions via Homebrew to override the bundled tools.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+
+                        HStack {
+                            Text("brew install poppler exiftool")
+                                .font(.system(.caption, design: .monospaced))
+                                .textSelection(.enabled)
+
+                            Spacer()
+
+                            Button {
+                                NSPasteboard.general.clearContents()
+                                NSPasteboard.general.setString(
+                                    "brew install poppler exiftool", forType: .string
+                                )
+                            } label: {
+                                Image(systemName: "doc.on.doc")
+                            }
+                            .buttonStyle(.borderless)
+                            .help("Copy to clipboard")
+                        }
+                        .padding(8)
+                        .background(.quaternary)
+                        .clipShape(RoundedRectangle(cornerRadius: 6))
+                    }
+                }
+                .font(.callout)
             }
         }
         .formStyle(.grouped)
-        .frame(width: 480, height: 420)
+        .frame(width: 480, height: 520)
+        .onChange(of: viewModel.outputDestination) {
+            viewModel.saveOutputDestination()
+        }
         .onChange(of: viewModel.selectedFormat) {
             viewModel.saveFormatSelection()
         }
-    }
-
-    // MARK: - Step 1: Homebrew
-
-    @ViewBuilder
-    private var homebrewStep: some View {
-        StepRow(number: 1, title: "Homebrew", isComplete: viewModel.homebrewInstalled) {
-            if viewModel.homebrewInstalled {
-                Label("Homebrew is installed", systemImage: "checkmark.circle.fill")
-                    .foregroundStyle(.green)
-                    .font(.callout)
-            } else {
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Paste this command in Terminal:")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-
-                    HStack {
-                        Text(HomebrewService.installCommand)
-                            .font(.system(.caption2, design: .monospaced))
-                            .lineLimit(2)
-                            .textSelection(.enabled)
-
-                        Spacer()
-
-                        Button {
-                            NSPasteboard.general.clearContents()
-                            NSPasteboard.general.setString(
-                                HomebrewService.installCommand, forType: .string
-                            )
-                        } label: {
-                            Image(systemName: "doc.on.doc")
-                        }
-                        .buttonStyle(.borderless)
-                        .help("Copy to clipboard")
-                    }
-                    .padding(8)
-                    .background(.quaternary)
-                    .clipShape(RoundedRectangle(cornerRadius: 6))
-
-                    Button("Open Terminal") {
-                        NSWorkspace.shared.open(
-                            URL(fileURLWithPath: "/System/Applications/Utilities/Terminal.app")
-                        )
-                    }
-                    .buttonStyle(.bordered)
-                    .controlSize(.small)
-                }
-            }
+        .onChange(of: viewModel.preferBundledTools) {
+            viewModel.saveToolSourcePreference()
         }
     }
 
-    // MARK: - Step 2: Poppler (pdfimages)
+    // MARK: - Tool Row
 
     @ViewBuilder
-    private var popplerStep: some View {
-        StepRow(number: 2, title: "Poppler (pdfimages)", isComplete: viewModel.pdfimagesAvailable) {
-            if viewModel.pdfimagesAvailable {
-                Label("pdfimages is available", systemImage: "checkmark.circle.fill")
-                    .foregroundStyle(.green)
-                    .font(.callout)
-            } else if !viewModel.homebrewInstalled {
-                Text("Complete step 1 first")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            } else if viewModel.isInstallingPoppler {
-                VStack(alignment: .leading, spacing: 4) {
-                    HStack(spacing: 8) {
-                        ProgressView()
-                            .controlSize(.small)
-                        Text("Installing poppler...")
+    private func toolRow(
+        name: String,
+        url: URL?,
+        purpose: String,
+        bundledAvailable: Bool,
+        homebrewAvailable: Bool
+    ) -> some View {
+        HStack {
+            if let url {
+                Label {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(name)
                             .font(.callout)
+                        Text(toolSource(url))
+                            .font(.caption2)
                             .foregroundStyle(.secondary)
                     }
-                    Text("This may take a few minutes.")
-                        .font(.caption)
-                        .foregroundStyle(.tertiary)
+                } icon: {
+                    Image(systemName: "checkmark.circle.fill")
+                        .foregroundStyle(.green)
                 }
             } else {
-                VStack(alignment: .leading, spacing: 8) {
-                    HStack {
-                        Text("brew install poppler")
-                            .font(.system(.caption, design: .monospaced))
-                            .textSelection(.enabled)
-
-                        Spacer()
-
-                        Button {
-                            NSPasteboard.general.clearContents()
-                            NSPasteboard.general.setString("brew install poppler", forType: .string)
-                        } label: {
-                            Image(systemName: "doc.on.doc")
-                        }
-                        .buttonStyle(.borderless)
-                        .help("Copy to clipboard")
+                Label {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(name)
+                            .font(.callout)
+                        Text("Not found — \(purpose) unavailable")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
                     }
-                    .padding(8)
-                    .background(.quaternary)
-                    .clipShape(RoundedRectangle(cornerRadius: 6))
-
-                    Button("Install Poppler") {
-                        Task { await viewModel.installPoppler() }
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .controlSize(.small)
-
-                    if let error = viewModel.installError {
-                        Text(error)
-                            .font(.caption)
-                            .foregroundStyle(.red)
-                            .lineLimit(3)
-                    }
+                } icon: {
+                    Image(systemName: "xmark.circle.fill")
+                        .foregroundStyle(.red)
                 }
+            }
+
+            Spacer()
+
+            if bundledAvailable && homebrewAvailable {
+                Picker("Source", selection: $viewModel.preferBundledTools) {
+                    Text("Bundled").tag(true as Bool)
+                    Text("Homebrew").tag(false as Bool)
+                }
+                .labelsHidden()
+                .pickerStyle(.segmented)
+                .fixedSize()
             }
         }
     }
 
-    // MARK: - Step 3: exiftool
-
-    @ViewBuilder
-    private var exiftoolStep: some View {
-        StepRow(number: 3, title: "exiftool", isComplete: viewModel.exiftoolAvailable) {
-            if viewModel.exiftoolAvailable {
-                Label("exiftool is available", systemImage: "checkmark.circle.fill")
-                    .foregroundStyle(.green)
-                    .font(.callout)
-            } else if !viewModel.homebrewInstalled {
-                Text("Complete step 1 first")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            } else {
-                VStack(alignment: .leading, spacing: 8) {
-                    HStack {
-                        Text("brew install exiftool")
-                            .font(.system(.caption, design: .monospaced))
-                            .textSelection(.enabled)
-
-                        Spacer()
-
-                        Button {
-                            NSPasteboard.general.clearContents()
-                            NSPasteboard.general.setString("brew install exiftool", forType: .string)
-                        } label: {
-                            Image(systemName: "doc.on.doc")
-                        }
-                        .buttonStyle(.borderless)
-                        .help("Copy to clipboard")
-                    }
-                    .padding(8)
-                    .background(.quaternary)
-                    .clipShape(RoundedRectangle(cornerRadius: 6))
-                }
-            }
+    private func toolSource(_ url: URL) -> String {
+        let path = url.path
+        if path.contains("/Contents/Helpers/") || path.contains("/Contents/Resources/") {
+            return "Bundled"
+        } else if path.contains("/opt/homebrew/") || path.contains("/usr/local/") || path.contains("/opt/local/") {
+            return "Homebrew (\(path))"
+        } else {
+            return path
         }
     }
 }

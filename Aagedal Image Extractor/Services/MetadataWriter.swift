@@ -46,7 +46,7 @@ struct MetadataWriter {
     // MARK: - Page Number Parsing
 
     nonisolated static func parsePageNumber(from filename: String) -> Int? {
-        let pattern = #/-(\d+)-\d+\.[a-zA-Z]+$/#
+        let pattern = #/_P(\d+)_I\d+\.[a-zA-Z]+$/#
         guard let match = filename.firstMatch(of: pattern) else { return nil }
         return Int(match.1)
     }

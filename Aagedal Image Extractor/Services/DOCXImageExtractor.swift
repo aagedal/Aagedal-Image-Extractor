@@ -3,7 +3,8 @@ import Foundation
 struct DOCXImageExtractor {
     func extract(
         docxURL: URL,
-        to outputDirectory: URL
+        to outputDirectory: URL,
+        documentName: String
     ) async throws -> [URL] {
         let fm = FileManager.default
         try fm.createDirectory(at: outputDirectory, withIntermediateDirectories: true)
@@ -36,9 +37,14 @@ struct DOCXImageExtractor {
         ]
 
         var extractedURLs: [URL] = []
-        for file in mediaContents.sorted(by: { $0.lastPathComponent < $1.lastPathComponent }) {
-            guard imageExtensions.contains(file.pathExtension.lowercased()) else { continue }
-            let destURL = outputDirectory.appendingPathComponent(file.lastPathComponent)
+        let sorted = mediaContents
+            .filter { imageExtensions.contains($0.pathExtension.lowercased()) }
+            .sorted { $0.lastPathComponent < $1.lastPathComponent }
+
+        for (index, file) in sorted.enumerated() {
+            let ext = file.pathExtension.lowercased()
+            let newName = String(format: "%@_I%03d.%@", documentName, index + 1, ext)
+            let destURL = outputDirectory.appendingPathComponent(newName)
             try fm.copyItem(at: file, to: destURL)
             extractedURLs.append(destURL)
         }

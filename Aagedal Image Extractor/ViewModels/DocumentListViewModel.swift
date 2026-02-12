@@ -18,6 +18,14 @@ final class DocumentListViewModel {
     var setupDismissed: Bool = false
     var errorMessage: String?
     var showError: Bool = false
+    var preferBundledTools: Bool = true
+    var outputDestination: OutputDestination = .nextToOriginals
+    var customOutputDirectoryURL: URL?
+
+    var pdfimagesBundledAvailable: Bool { PdfImagesLocator.bundledURL() != nil }
+    var pdfimagesHomebrewAvailable: Bool { PdfImagesLocator.homebrewURL() != nil }
+    var exiftoolBundledAvailable: Bool { ExiftoolLocator.bundledURL() != nil }
+    var exiftoolHomebrewAvailable: Bool { ExiftoolLocator.homebrewURL() != nil }
 
     var exiftoolAvailable: Bool { exiftoolURL != nil }
     var pdfimagesAvailable: Bool { pdfimagesURL != nil }
@@ -27,22 +35,51 @@ final class DocumentListViewModel {
 
     private static let metadataConfigKey = "MetadataConfiguration"
     private static let exportFormatKey = "ExportFormat"
+    private static let preferBundledToolsKey = "PreferBundledTools"
+    private static let outputDestinationKey = "OutputDestination"
+    private static let customOutputDirectoryBookmarkKey = "CustomOutputDirectoryBookmark"
 
     init() {
-        pdfimagesURL = PdfImagesLocator.locate()
-        exiftoolURL = ExiftoolLocator.locate()
-        if let data = UserDefaults.standard.data(forKey: Self.metadataConfigKey),
+        let defaults = UserDefaults.standard
+        if defaults.object(forKey: Self.preferBundledToolsKey) != nil {
+            preferBundledTools = defaults.bool(forKey: Self.preferBundledToolsKey)
+        }
+        pdfimagesURL = PdfImagesLocator.locate(preferBundled: preferBundledTools)
+        exiftoolURL = ExiftoolLocator.locate(preferBundled: preferBundledTools)
+        if let data = defaults.data(forKey: Self.metadataConfigKey),
            let saved = try? JSONDecoder().decode(MetadataConfiguration.self, from: data) {
             metadataConfiguration = saved
         }
-        if let raw = UserDefaults.standard.string(forKey: Self.exportFormatKey),
+        if let raw = defaults.string(forKey: Self.exportFormatKey),
            let saved = ExportFormat(rawValue: raw) {
             selectedFormat = saved
+        }
+        if let raw = defaults.string(forKey: Self.outputDestinationKey),
+           let saved = OutputDestination(rawValue: raw) {
+            outputDestination = saved
+        }
+        if let bookmarkData = defaults.data(forKey: Self.customOutputDirectoryBookmarkKey) {
+            var isStale = false
+            customOutputDirectoryURL = try? URL(
+                resolvingBookmarkDataOf: bookmarkData,
+                options: [],
+                relativeTo: nil,
+                bookmarkDataIsStale: &isStale
+            )
         }
     }
 
     func saveFormatSelection() {
         UserDefaults.standard.set(selectedFormat.rawValue, forKey: Self.exportFormatKey)
+    }
+
+    func saveOutputDestination() {
+        let defaults = UserDefaults.standard
+        defaults.set(outputDestination.rawValue, forKey: Self.outputDestinationKey)
+        if let url = customOutputDirectoryURL,
+           let bookmarkData = try? url.bookmarkData(options: [], includingResourceValuesForKeys: nil, relativeTo: nil) {
+            defaults.set(bookmarkData, forKey: Self.customOutputDirectoryBookmarkKey)
+        }
     }
 
     func saveMetadataConfiguration() {
@@ -75,9 +112,14 @@ final class DocumentListViewModel {
 
     func refreshDependencies() {
         homebrewInstalled = HomebrewService.isInstalled
-        pdfimagesURL = PdfImagesLocator.locate()
-        exiftoolURL = ExiftoolLocator.locate()
+        pdfimagesURL = PdfImagesLocator.locate(preferBundled: preferBundledTools)
+        exiftoolURL = ExiftoolLocator.locate(preferBundled: preferBundledTools)
         installError = nil
+    }
+
+    func saveToolSourcePreference() {
+        UserDefaults.standard.set(preferBundledTools, forKey: Self.preferBundledToolsKey)
+        refreshDependencies()
     }
 
     func installPoppler() async {
@@ -107,13 +149,26 @@ final class DocumentListViewModel {
     }
 
     private func processSingle(_ item: DocumentItem) async {
-        let outputDir = item.defaultOutputDirectory
+        let outputDir: URL
+        switch outputDestination {
+        case .nextToOriginals:
+            outputDir = item.defaultOutputDirectory
+        case .customDirectory:
+            guard let baseDir = customOutputDirectoryURL else {
+                item.state = .failed(message: "No custom output directory selected")
+                return
+            }
+            let docStem = item.sourceURL.deletingPathExtension().lastPathComponent
+            outputDir = baseDir.appendingPathComponent("\(docStem)_images")
+        }
         item.outputDirectoryURL = outputDir
         item.state = .extracting(progress: 0)
         logger.info("Starting processing: \(item.fileName)")
 
         do {
             var extractedFiles: [URL]
+
+            let docStem = item.sourceURL.deletingPathExtension().lastPathComponent
 
             switch item.documentType {
             case .pdf:
@@ -124,14 +179,16 @@ final class DocumentListViewModel {
                 extractedFiles = try await extractor.extract(
                     pdfURL: item.sourceURL,
                     to: outputDir,
-                    format: selectedFormat
+                    format: selectedFormat,
+                    documentName: docStem
                 )
                 logger.info("Extracted \(extractedFiles.count) files from PDF")
             case .docx:
                 let extractor = DOCXImageExtractor()
                 extractedFiles = try await extractor.extract(
                     docxURL: item.sourceURL,
-                    to: outputDir
+                    to: outputDir,
+                    documentName: docStem
                 )
                 logger.info("Extracted \(extractedFiles.count) files from DOCX")
             }

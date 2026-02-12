@@ -17,7 +17,7 @@ struct DropZoneView: View {
 
             if !pdfimagesAvailable {
                 Label(
-                    "pdfimages not found — install Poppler: brew install poppler",
+                    "pdfimages not found — please reinstall the application",
                     systemImage: "exclamationmark.triangle.fill"
                 )
                 .font(.caption)

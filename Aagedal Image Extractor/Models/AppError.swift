@@ -15,7 +15,7 @@ enum AppError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .pdfimagesNotFound:
-            "pdfimages not found. Install Poppler via Homebrew: brew install poppler"
+            "pdfimages not found. Please reinstall the application."
         case .pdfimagesExecutionFailed(let stderr):
             "pdfimages failed: \(stderr)"
         case .invalidDocx(let detail):
@@ -33,7 +33,7 @@ enum AppError: LocalizedError {
         case .metadataWriteFailed(let detail):
             "Metadata write failed: \(detail)"
         case .exiftoolNotFound:
-            "exiftool not found. Install via Homebrew: brew install exiftool"
+            "exiftool not found. Please reinstall the application."
         }
     }
 }
