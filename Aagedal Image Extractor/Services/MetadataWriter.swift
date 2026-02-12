@@ -39,7 +39,7 @@ struct MetadataWriter {
                 }
             }
 
-            await progressHandler(Double(index + 1) / total)
+            progressHandler(Double(index + 1) / total)
         }
     }
 

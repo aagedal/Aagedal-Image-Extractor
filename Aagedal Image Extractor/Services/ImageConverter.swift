@@ -18,7 +18,7 @@ struct ImageConverter {
             // Skip if already in target format
             if isMatchingFormat(ext: ext, format: format) {
                 outputURLs.append(file)
-                await progressHandler(Double(index + 1) / total)
+                progressHandler(Double(index + 1) / total)
                 continue
             }
 
@@ -32,7 +32,7 @@ struct ImageConverter {
             // Remove original if we created a new file
             try? FileManager.default.removeItem(at: file)
 
-            await progressHandler(Double(index + 1) / total)
+            progressHandler(Double(index + 1) / total)
         }
 
         return outputURLs

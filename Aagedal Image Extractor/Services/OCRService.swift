@@ -9,7 +9,7 @@ struct OCRResult: @unchecked Sendable {
 
 struct OCRService {
     private static let renderDPI: CGFloat = 300.0
-    private static let supportedLanguages = ["en", "no", "da", "sv", "de", "fr"]
+    nonisolated private static let supportedLanguages = ["en", "no", "da", "sv", "de", "fr"]
 
     // Page rendering uses PDFKit/NSImage which require the main thread
     func performOCR(
@@ -35,7 +35,7 @@ struct OCRService {
                 }
             }
 
-            await progressHandler(Double(i + 1) / Double(pageCount))
+            progressHandler(Double(i + 1) / Double(pageCount))
         }
 
         return results

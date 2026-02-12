@@ -61,7 +61,7 @@ final class DocumentListViewModel {
         if let bookmarkData = defaults.data(forKey: Self.customOutputDirectoryBookmarkKey) {
             var isStale = false
             customOutputDirectoryURL = try? URL(
-                resolvingBookmarkDataOf: bookmarkData,
+                resolvingBookmarkData: bookmarkData,
                 options: [],
                 relativeTo: nil,
                 bookmarkDataIsStale: &isStale
