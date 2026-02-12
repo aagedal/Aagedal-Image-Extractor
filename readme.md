@@ -2,6 +2,10 @@
 
 A macOS app for batch extracting images from PDF and DOCX files. Supports JPEG and TIFF output, optional OCR to produce searchable PDFs, and IPTC metadata writing.
 
+<img width="815" height="863" alt="SCR-20260212-mzyw" src="https://github.com/user-attachments/assets/66ffe894-47bc-445b-81c9-646557f7b339" />
+
+
+
 ## Features
 
 - **Drag-and-drop** PDF and DOCX files for processing
