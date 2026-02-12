@@ -4,6 +4,14 @@ A macOS app for batch extracting images from PDF and DOCX files. Supports JPEG a
 
 <img width="815" height="863" alt="SCR-20260212-mzyw" src="https://github.com/user-attachments/assets/66ffe894-47bc-445b-81c9-646557f7b339" />
 
+## Installation
+#### Homebrew
+```
+brew install aagedal/casks/aagedal-image-extractor
+```
+#### Latest release
+[Version 1.1.0
+](https://github.com/aagedal/Aagedal-Image-Extractor/releases/download/v.1.1.0/Aagedal-Image-Extractor_1-1-0.zip)
 
 
 ## Features
