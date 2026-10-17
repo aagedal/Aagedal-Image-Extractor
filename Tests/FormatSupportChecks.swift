@@ -1,3 +1,4 @@
+import AppKit
 import Foundation
 
 private struct CheckFailure: Error {
@@ -60,7 +61,7 @@ struct FormatSupportChecks {
         }
         try check(DocumentType.allowedContentTypes.count == DocumentType.allCases.count,
                   "Every input format must be selectable in the importer")
-        for ext in ["doc", "ppt", "xls", "zip", "txt"] {
+        for ext in ["txt", "rar", "exe"] {
             try check(DocumentType(url: URL(fileURLWithPath: "file.\(ext)")) == nil, "Reject \(ext)")
         }
         try check(ExportFormat.availableCases.contains(.png), "Expose PNG export")
@@ -95,6 +96,124 @@ struct FormatSupportChecks {
         } catch is CheckFailure { throw CheckFailure(message: "Expected launch failure") }
           catch {}
 
+        // Nested archives must preserve equal basenames and ignore non-images and symlinks.
+        let collection = root.appendingPathComponent("collection")
+        for folder in ["chapter2", "chapter10", "__MACOSX"] {
+            try fm.createDirectory(at: collection.appendingPathComponent(folder), withIntermediateDirectories: true)
+        }
+        try imageData.write(to: collection.appendingPathComponent("chapter2/page.png"))
+        try Data("second".utf8).write(to: collection.appendingPathComponent("chapter10/page.png"))
+        try imageData.write(to: collection.appendingPathComponent("__MACOSX/preview.png"))
+        try Data("text".utf8).write(to: collection.appendingPathComponent("notes.txt"))
+        try fm.createSymbolicLink(at: collection.appendingPathComponent("link.png"),
+                                  withDestinationURL: collection.appendingPathComponent("chapter2/page.png"))
+        for ext in ["zip", "cbz"] {
+            let archive = root.appendingPathComponent("collection.\(ext)")
+            let zipped = try await runProcess(executableURL: URL(fileURLWithPath: "/usr/bin/zip"),
+                arguments: ["-q", "-r", "-y", archive.path, "."], currentDirectoryURL: collection)
+            try check(zipped.exitCode == 0, "Create nested archive")
+            let files = try await ArchiveImageExtractor().extract(documentURL: archive,
+                to: root.appendingPathComponent("collection-output-\(ext)"), documentName: "collection")
+            let payloads = try files.map { try Data(contentsOf: $0) }
+            try check(payloads == [imageData, Data("second".utf8)], "Nested duplicate basenames and natural ordering")
+        }
+        for path in ["../bad.png", "/bad.png", "a/../../bad.png", "a/./bad.png", "a\\bad.png", "a//bad.png"] {
+            try check(!ArchiveImageExtractor.isSafeEntry(path), "Reject unsafe path: \(path)")
+        }
+
+        let ebook = root.appendingPathComponent("ebook")
+        try fm.createDirectory(at: ebook.appendingPathComponent("META-INF"), withIntermediateDirectories: true)
+        try fm.createDirectory(at: ebook.appendingPathComponent("BOOK/images"), withIntermediateDirectories: true)
+        try Data("<container><rootfiles><rootfile full-path=\"BOOK/package.opf\"/></rootfiles></container>".utf8)
+            .write(to: ebook.appendingPathComponent("META-INF/container.xml"))
+        let package = """
+        <package><manifest>
+          <item href="images/picture%20one.png" media-type="image/png" id="image"/>
+          <item href="images/picture%20one.png" media-type="image/png" id="duplicate"/>
+        </manifest></package>
+        """
+        try Data(package.utf8).write(to: ebook.appendingPathComponent("BOOK/package.opf"))
+        try imageData.write(to: ebook.appendingPathComponent("BOOK/images/picture one.png"))
+        try imageData.write(to: ebook.appendingPathComponent("unlisted.png"))
+        let epub = root.appendingPathComponent("book.epub")
+        _ = try await runProcess(executableURL: URL(fileURLWithPath: "/usr/bin/zip"),
+            arguments: ["-q", "-r", epub.path, "."], currentDirectoryURL: ebook)
+        let illustrations = try await ArchiveImageExtractor().extract(documentURL: epub,
+            to: root.appendingPathComponent("epub-output"), documentName: "book")
+        try check(illustrations.count == 1, "EPUB manifest selection, URL decoding and deduplication")
+        let illustrationData = try Data(contentsOf: illustrations[0])
+        try check(illustrationData == imageData, "Preserve EPUB image bytes")
+
+        // Real AppKit RTFD fixture containing an image and a non-image attachment.
+        let richText = NSMutableAttributedString(string: "Images: ")
+        let attachment = NSTextAttachment()
+        let wrapper = FileWrapper(regularFileWithContents: imageData)
+        wrapper.preferredFilename = "image.png"
+        attachment.fileWrapper = wrapper
+        richText.append(NSAttributedString(attachment: attachment))
+        let nonImage = NSTextAttachment()
+        nonImage.fileWrapper = FileWrapper(regularFileWithContents: Data("not an image".utf8))
+        nonImage.fileWrapper?.preferredFilename = "notes.txt"
+        richText.append(NSAttributedString(attachment: nonImage))
+        let rtfd = root.appendingPathComponent("rich.rtfd")
+        let richWrapper = try richText.fileWrapper(from: NSRange(location: 0, length: richText.length),
+            documentAttributes: [.documentType: NSAttributedString.DocumentType.rtfd])
+        try richWrapper.write(to: rtfd, options: .atomic, originalContentsURL: nil)
+        let attachments = try RichTextImageExtractor().extract(documentURL: rtfd,
+            to: root.appendingPathComponent("rtfd-output"), documentName: "rich")
+        try check(attachments.count == 1, "RTFD exports only image attachments")
+        let attachmentData = try Data(contentsOf: attachments[0])
+        try check(attachmentData == imageData, "RTFD preserves original attachment bytes")
+        let pictureRTF = root.appendingPathComponent("picture.rtf")
+        let hex = imageData.map { String(format: "%02x", $0) }.joined()
+        try Data(("{\\rtf1\\ansi {\\pict\\pngblip\\picw1\\pich1 " + hex + "}}").utf8).write(to: pictureRTF)
+        let rtfImages = try RichTextImageExtractor().extract(documentURL: pictureRTF,
+            to: root.appendingPathComponent("rtf-output"), documentName: "picture")
+        try check(rtfImages.count == 1, "RTF embedded PNG extraction")
+        let plainRTF = root.appendingPathComponent("plain.rtf")
+        try Data("{\\rtf1 No pictures}".utf8).write(to: plainRTF)
+        do {
+            _ = try RichTextImageExtractor().extract(documentURL: plainRTF,
+                to: root.appendingPathComponent("rtf-empty"), documentName: "plain")
+            throw CheckFailure(message: "Expected no images in text-only RTF")
+        } catch AppError.noImagesFound {}
+
+        let binaryRTF = Data("{\\rtf1{\\pict\\pngblip\\bin3 ".utf8) + Data([123, 92, 125]) + Data("}}".utf8)
+        let binaryImages = try RTFImageParser.images(in: binaryRTF)
+        try check(binaryImages.count == 1 && binaryImages[0].0 == Data([123, 92, 125]), "RTF binary data must not affect group nesting")
+        let nestedRTF = Data("{\\rtf1{\\pict\\pngblip{\\*\\blipuid deadbeef} 8950}}".utf8)
+        let nestedImages = try RTFImageParser.images(in: nestedRTF)
+        try check(nestedImages[0].0 == Data([0x89, 0x50]), "Ignore RTF picture metadata groups")
+        do {
+            _ = try RTFImageParser.images(in: Data("{\\rtf1{\\pict\\pngblip\\bin999 x}}".utf8))
+            throw CheckFailure(message: "Expected invalid RTF binary payload failure")
+        } catch AppError.conversionFailed {}
+
+        // Fake only the LibreOffice boundary; use real archive extraction on its converted output.
+        let office = root.appendingPathComponent("soffice")
+        try Data("""
+        #!/bin/sh
+        for arg do
+            if [ "$previous" = "--outdir" ]; then output="$arg"; fi
+            if [ "$previous" = "--convert-to" ]; then target="$arg"; fi
+            previous="$arg"
+        done
+        cp '\(root.path)'/Fixture."$target" "$output/legacy.$target"
+        """.utf8).write(to: office)
+        try fm.setAttributes([.posixPermissions: 0o755], ofItemAtPath: office.path)
+        for ext in ["doc", "ppt", "xls"] {
+            let legacyFiles = try await LegacyOfficeImageExtractor().extract(
+                documentURL: root.appendingPathComponent("legacy.\(ext)"),
+                to: root.appendingPathComponent("legacy-output-\(ext)"), documentName: "legacy", libreOfficeURL: office)
+            try check(legacyFiles.count == 3, "Legacy Office conversion feeds archive extraction: \(ext)")
+        }
+        try Data("#!/bin/sh\nexit 0\n".utf8).write(to: office)
+        do {
+            _ = try await LegacyOfficeImageExtractor().extract(documentURL: root.appendingPathComponent("legacy.ppt"),
+                to: root.appendingPathComponent("failed-legacy"), documentName: "legacy", libreOfficeURL: office)
+            throw CheckFailure(message: "Expected missing conversion output failure")
+        } catch AppError.conversionFailed {}
+
         // A controlled pdfimages stand-in exercises naming and isolation without Poppler installed.
         let tool = root.appendingPathComponent("pdfimages")
         try Data("""
@@ -112,10 +231,39 @@ struct FormatSupportChecks {
         try check(pdfFiles.map(\.lastPathComponent) == ["test_P001_I001.png"], "PDF naming and current-run isolation")
         let existingData = try Data(contentsOf: existing)
         try check(existingData == Data("previous".utf8), "Preserve existing images")
+        try Data("""
+        #!/bin/sh
+        [ "$1" = "-p" ] && [ "$2" = "-j" ] && [ "$3" = "-png" ] || exit 8
+        for root do :; done
+        printf jpeg > "$root-001-000.jpg"
+        """.utf8).write(to: tool)
+        let jxlSourceFiles = try await PDFImageExtractor(pdfimagesURL: tool).extract(
+            pdfURL: root.appendingPathComponent("test.pdf"), to: root.appendingPathComponent("pdf-jxl"),
+            format: .jpegXL, documentName: "test")
+        try check(jxlSourceFiles.count == 1 && jxlSourceFiles[0].pathExtension == "jpg",
+                  "JPEG XL export must preserve embedded PDF JPEGs for reversible recompression")
         try Data("#!/bin/sh\nexit 0\n".utf8).write(to: tool)
         let noFiles = try await PDFImageExtractor(pdfimagesURL: tool).extract(
             pdfURL: root.appendingPathComponent("empty.pdf"), to: pdfOutput, format: .png, documentName: "empty")
         try check(noFiles.isEmpty, "Old output must not turn an empty PDF into a successful extraction")
-        print("Passed: seven input types, six archive layouts, selective extraction, symlink exclusion, natural ordering, corrupt/empty archives, format aliases, large process output, launch errors and PDF output isolation.")
+        try Data("""
+        #!/bin/sh
+        [ "$2" = "-all" ] || exit 8
+        for root do :; done
+        printf jpeg > "$root-001-000.jpg"
+        printf jbig2 > "$root-002-001.jb2e"
+        printf globals > "$root-002-001.jb2g"
+        printf ccitt > "$root-003-002.ccitt"
+        printf params > "$root-003-002.params"
+        """.utf8).write(to: tool)
+        let originalOutput = root.appendingPathComponent("pdf-original")
+        let originals = try await PDFImageExtractor(pdfimagesURL: tool).extract(
+            pdfURL: root.appendingPathComponent("test.pdf"), to: originalOutput, format: .original, documentName: "test")
+        try check(originals.count == 3, "Original PDF export counts images without companion files")
+        try check(fm.fileExists(atPath: originalOutput.appendingPathComponent("test_P002_I002.jb2g").path), "Preserve JBIG2 globals")
+        try check(fm.fileExists(atPath: originalOutput.appendingPathComponent("test_P003_I003.params").path), "Preserve CCITT parameters")
+        try check(ExportFormat.original.matches(fileExtension: "anything"), "Original mode skips all conversion")
+        try check(ExportFormat.availableCases.contains(.jpegXL), "Expose JPEG XL")
+        print("Passed: 29 input types, Office layouts, nested ZIP/CBZ, EPUB manifests, RTF hex/binary pictures, RTFD attachments, legacy conversion boundaries, symlink/path checks, archive failures, original PDF companion files and process isolation.")
     }
 }

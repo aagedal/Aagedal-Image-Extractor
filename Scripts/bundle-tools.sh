@@ -33,7 +33,12 @@ if [[ -z "$IDENTITY" ]]; then
 fi
 
 sign_binary() {
-    codesign --force --sign "$IDENTITY" --options runtime "$1"
+    if [[ "$IDENTITY" == "-" ]]; then
+        # Hardened library validation rejects ad-hoc dylibs without a Team ID.
+        codesign --force --sign "$IDENTITY" "$1"
+    else
+        codesign --force --sign "$IDENTITY" --options runtime "$1"
+    fi
 }
 
 # --- pdfimages (Mach-O) → Contents/Helpers/ ---
@@ -50,6 +55,27 @@ if [[ -d "$VENDOR_DIR/pdfimages" ]]; then
         sign_binary "$dylib"
     done
     sign_binary "$HELPERS_DIR/pdfimages"
+fi
+
+# --- cjxl (Mach-O) → Contents/Helpers/ ---
+if [[ -d "$VENDOR_DIR/cjxl" ]]; then
+    mkdir -p "$HELPERS_DIR"
+    rm -f "$HELPERS_DIR/cjxl"
+    rm -rf "$HELPERS_DIR/cjxl-lib"
+    cp -R "$VENDOR_DIR/cjxl/cjxl" "$HELPERS_DIR/cjxl"
+    cp -R "$VENDOR_DIR/cjxl/cjxl-lib" "$HELPERS_DIR/cjxl-lib"
+    for dylib in "$HELPERS_DIR/cjxl-lib"/*.dylib; do
+        [[ -f "$dylib" ]] || continue
+        sign_binary "$dylib"
+    done
+    sign_binary "$HELPERS_DIR/cjxl"
+    if [[ -d "$VENDOR_DIR/cjxl/licenses" ]]; then
+        mkdir -p "$RESOURCES_DIR"
+        rm -rf "$RESOURCES_DIR/jpeg-xl-licenses"
+        cp -R "$VENDOR_DIR/cjxl/licenses" "$RESOURCES_DIR/jpeg-xl-licenses"
+    fi
+else
+    echo "warning: cjxl not prepared — JPEG XL encoding will require Homebrew jpeg-xl"
 fi
 
 # --- exiftool (Perl) → Contents/Resources/exiftool/ ---

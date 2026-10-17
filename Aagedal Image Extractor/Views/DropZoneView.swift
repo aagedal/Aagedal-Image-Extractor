@@ -11,11 +11,15 @@ struct DropZoneView: View {
                 .font(.system(size: 48))
                 .foregroundStyle(.secondary)
 
-            Text("Drop PDF, Office or OpenDocument files here")
+            Text("Drop documents, ebooks or image archives here")
                 .font(.title3)
                 .foregroundStyle(.secondary)
 
-            Text("PDF · DOCX · PPTX · XLSX · ODT · ODP · ODS")
+            Text("PDF · Office · OpenDocument · EPUB · ZIP/CBZ · RTF/RTFD")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+
+            Text("Legacy DOC, PPT and XLS require LibreOffice in Applications.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
 

@@ -3,12 +3,13 @@ import UniformTypeIdentifiers
 
 enum DocumentType: String, CaseIterable {
     case pdf
-    case docx
-    case pptx
-    case xlsx
-    case odt
-    case odp
-    case ods
+    case docx, docm, dotx, dotm
+    case pptx, pptm, potx, potm, ppsx, ppsm
+    case xlsx, xlsm, xltx, xltm
+    case odt, odp, ods, ott, otp, ots
+    case epub, zip, cbz
+    case rtf, rtfd
+    case doc, ppt, xls
 
     init?(url: URL) {
         self.init(rawValue: url.pathExtension.lowercased())
@@ -21,20 +22,22 @@ enum DocumentType: String, CaseIterable {
     /// Only extract embedded media, excluding previews, attachments and macros.
     var mediaDirectory: String? {
         switch self {
-        case .pdf: nil
-        case .docx: "word/media"
-        case .pptx: "ppt/media"
-        case .xlsx: "xl/media"
-        case .odt, .odp, .ods: "Pictures"
+        case .docx, .docm, .dotx, .dotm: "word/media"
+        case .pptx, .pptm, .potx, .potm, .ppsx, .ppsm: "ppt/media"
+        case .xlsx, .xlsm, .xltx, .xltm: "xl/media"
+        case .odt, .odp, .ods, .ott, .otp, .ots: "Pictures"
+        default: nil
         }
     }
 
     var icon: String {
         switch self {
         case .pdf: "doc.richtext"
-        case .docx, .odt: "doc.text"
-        case .pptx, .odp: "rectangle.on.rectangle"
-        case .xlsx, .ods: "tablecells"
+        case .pptx, .pptm, .potx, .potm, .ppsx, .ppsm, .odp, .otp, .ppt: "rectangle.on.rectangle"
+        case .xlsx, .xlsm, .xltx, .xltm, .ods, .ots, .xls: "tablecells"
+        case .zip, .cbz: "doc.zipper"
+        case .epub: "book"
+        default: "doc.text"
         }
     }
 }
