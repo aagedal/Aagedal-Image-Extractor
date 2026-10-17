@@ -11,6 +11,9 @@ swiftc -parse-as-library -module-cache-path "$TEST_DIR/modules" \
     "$SOURCES/Models/ExportFormat.swift" \
     "$SOURCES/Services/ProcessRunner.swift" \
     "$SOURCES/Services/ArchiveImageExtractor.swift" \
+    "$SOURCES/Services/RichTextImageExtractor.swift" \
+    "$SOURCES/Services/RTFImageParser.swift" \
+    "$SOURCES/Services/LegacyOfficeImageExtractor.swift" \
     "$SOURCES/Services/PDFImageExtractor.swift" \
     "$PROJECT_DIR/Tests/FormatSupportChecks.swift" \
     -o "$TEST_DIR/format-checks"
@@ -25,6 +28,7 @@ if [[ $# -gt 0 ]]; then
         "$SOURCES/Models/AppError.swift" "$SOURCES/Models/ExportFormat.swift" \
         "$SOURCES/Models/MetadataConfiguration.swift" "$SOURCES/Services/MetadataWriter.swift" \
         "$SOURCES/Services/ProcessRunner.swift" \
+        "$SOURCES/Services/CjxlLocator.swift" "$SOURCES/Services/JpegXLEncoder.swift" \
         "$SOURCES/Services/ImageConverter.swift" "$PROJECT_DIR/Tests/RasterExportChecks.swift" \
         "$PRODUCTS/JxlCoder.o" "$PRODUCTS/jxlc.o" \
         -lbrotlicommon -lbrotlidec -lbrotlienc -lhwy -ljxl_threads -ljxl -ljxl_cms -lskcms -ljpegli \
@@ -37,10 +41,14 @@ swiftc -parse-as-library -default-isolation MainActor -module-cache-path "$TEST_
     "$SOURCES"/Models/*.swift \
     "$SOURCES/Services/ProcessRunner.swift" \
     "$SOURCES/Services/ArchiveImageExtractor.swift" \
+    "$SOURCES/Services/RichTextImageExtractor.swift" \
+    "$SOURCES/Services/RTFImageParser.swift" \
+    "$SOURCES/Services/LegacyOfficeImageExtractor.swift" \
     "$SOURCES/Services/PDFImageExtractor.swift" \
     "$SOURCES/Services/MetadataWriter.swift" \
     "$SOURCES/Services/OCRService.swift" \
     "$SOURCES/Services/SearchablePDFBuilder.swift" \
+    "$SOURCES/Services/CjxlLocator.swift" \
     "$SOURCES/Services/PdfImagesLocator.swift" \
     "$SOURCES/Services/ExiftoolLocator.swift" \
     "$SOURCES/Services/HomebrewService.swift" \

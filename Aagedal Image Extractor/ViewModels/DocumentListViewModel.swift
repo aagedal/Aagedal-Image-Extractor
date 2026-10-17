@@ -11,6 +11,7 @@ final class DocumentListViewModel {
     var ocrEnabled: Bool = false
     var metadataConfiguration = MetadataConfiguration()
     var exiftoolURL: URL?
+    var cjxlURL: URL?
     var pdfimagesURL: URL?
     var homebrewInstalled: Bool = HomebrewService.isInstalled
     var isInstallingPoppler: Bool = false
@@ -21,6 +22,9 @@ final class DocumentListViewModel {
     var preferBundledTools: Bool = true
     var outputDestination: OutputDestination = .nextToOriginals
     var customOutputDirectoryURL: URL?
+
+    var cjxlBundledAvailable: Bool { CjxlLocator.bundledURL() != nil }
+    var cjxlHomebrewAvailable: Bool { CjxlLocator.homebrewURL() != nil }
 
     var pdfimagesBundledAvailable: Bool { PdfImagesLocator.bundledURL() != nil }
     var pdfimagesHomebrewAvailable: Bool { PdfImagesLocator.homebrewURL() != nil }
@@ -44,6 +48,7 @@ final class DocumentListViewModel {
         if defaults.object(forKey: Self.preferBundledToolsKey) != nil {
             preferBundledTools = defaults.bool(forKey: Self.preferBundledToolsKey)
         }
+        cjxlURL = CjxlLocator.locate(preferBundled: preferBundledTools)
         pdfimagesURL = PdfImagesLocator.locate(preferBundled: preferBundledTools)
         exiftoolURL = ExiftoolLocator.locate(preferBundled: preferBundledTools)
         if let data = defaults.data(forKey: Self.metadataConfigKey),
@@ -113,6 +118,7 @@ final class DocumentListViewModel {
 
     func refreshDependencies() {
         homebrewInstalled = HomebrewService.isInstalled
+        cjxlURL = CjxlLocator.locate(preferBundled: preferBundledTools)
         pdfimagesURL = PdfImagesLocator.locate(preferBundled: preferBundledTools)
         exiftoolURL = ExiftoolLocator.locate(preferBundled: preferBundledTools)
         installError = nil
@@ -147,6 +153,7 @@ final class DocumentListViewModel {
         let format: ExportFormat
         let ocrEnabled: Bool
         let metadata: MetadataConfiguration
+        let cjxlURL: URL?
         let pdfimagesURL: URL?
         let exiftoolURL: URL?
         let outputDestination: OutputDestination
@@ -161,6 +168,7 @@ final class DocumentListViewModel {
             format: selectedFormat,
             ocrEnabled: ocrEnabled,
             metadata: metadataConfiguration,
+            cjxlURL: cjxlURL,
             pdfimagesURL: pdfimagesURL,
             exiftoolURL: exiftoolURL,
             outputDestination: outputDestination,
@@ -219,7 +227,13 @@ final class DocumentListViewModel {
                     documentName: docStem
                 )
                 logger.info("Extracted \(extractedFiles.count) files from PDF")
-            case .docx, .pptx, .xlsx, .odt, .odp, .ods:
+            case .rtf, .rtfd:
+                extractedFiles = try RichTextImageExtractor().extract(
+                    documentURL: item.sourceURL, to: outputDir, documentName: docStem)
+            case .doc, .ppt, .xls:
+                extractedFiles = try await LegacyOfficeImageExtractor().extract(
+                    documentURL: item.sourceURL, to: outputDir, documentName: docStem)
+            default:
                 let extractor = ArchiveImageExtractor()
                 extractedFiles = try await extractor.extract(
                     documentURL: item.sourceURL,
@@ -243,7 +257,7 @@ final class DocumentListViewModel {
             if needsConversion {
                 logger.info("Converting \(extractedFiles.count) files to \(format.displayName)")
                 item.state = .converting(progress: 0)
-                let converter = ImageConverter()
+                let converter = ImageConverter(cjxlURL: settings.cjxlURL)
                 extractedFiles = try await converter.convert(
                     files: extractedFiles,
                     to: format,

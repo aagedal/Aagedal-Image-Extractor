@@ -3,6 +3,12 @@ import Foundation
 import JxlCoder
 
 struct ImageConverter {
+    let cjxlURL: URL?
+
+    init(cjxlURL: URL? = CjxlLocator.locate()) {
+        self.cjxlURL = cjxlURL
+    }
+
     func convert(
         files: [URL],
         to format: ExportFormat,
@@ -41,7 +47,18 @@ struct ImageConverter {
         to output: URL,
         format: ExportFormat
     ) async throws {
+        if format == .jpegXL {
+            guard let cjxlURL else { throw AppError.cjxlNotFound }
+            try await JpegXLEncoder(executableURL: cjxlURL).encode(input: input, output: output)
+            return
+        }
         let data = try Data(contentsOf: input)
+        // Reconstruct a transcoded JPEG verbatim instead of applying another lossy JPEG encode.
+        if format == .jpeg, JpegXLEncoder.isJPEGXL(data),
+           let jpeg = try? JXLCoder.inverse(jxlData: data) {
+            try jpeg.write(to: output, options: .atomic)
+            return
+        }
         guard let imageRep = NSBitmapImageRep(data: data) else {
             throw AppError.conversionFailed("Cannot read image: \(input.lastPathComponent)")
         }
@@ -49,6 +66,8 @@ struct ImageConverter {
         let outputData: Data?
 
         switch format {
+        case .original:
+            return
         case .jpeg:
             outputData = imageRep.representation(
                 using: .jpeg,
@@ -62,16 +81,7 @@ struct ImageConverter {
         case .png:
             outputData = imageRep.representation(using: .png, properties: [:])
         case .jpegXL:
-            guard let cgImage = imageRep.cgImage else {
-                throw AppError.conversionFailed(
-                    "Cannot create CGImage from: \(input.lastPathComponent)"
-                )
-            }
-            let nsImage = NSImage(cgImage: cgImage, size: NSSize(
-                width: imageRep.pixelsWide,
-                height: imageRep.pixelsHigh
-            ))
-            outputData = try JXLCoder.encode(image: nsImage)
+            preconditionFailure("JPEG XL is encoded before bitmap conversion")
         }
 
         guard let finalData = outputData else {

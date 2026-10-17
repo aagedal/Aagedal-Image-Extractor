@@ -21,13 +21,15 @@ struct PDFImageExtractor {
         var arguments = ["-p"]
 
         switch format {
-        case .jpeg:
+        case .original:
+            arguments += ["-all"]
+        case .jpeg, .jpegXL:
             // -j passes through JPEG-encoded images, -png extracts others as PNG
             arguments += ["-j", "-png"]
         case .tiff:
             arguments += ["-tiff"]
-        case .png, .jpegXL:
-            // Extract as PNG first, then convert to JXL
+        case .png:
+            // Explicit PNG export decodes every image to PNG.
             arguments += ["-png"]
         }
 
@@ -47,7 +49,7 @@ struct PDFImageExtractor {
             includingPropertiesForKeys: nil
         )
 
-        let imageExtensions: Set<String> = ["jpg", "jpeg", "png", "tiff", "tif", "ppm", "pbm", "ccitt"]
+        let imageExtensions: Set<String> = ["jpg", "jpeg", "png", "tiff", "tif", "ppm", "pbm", "ccitt", "params", "jp2", "jb2e", "jb2g"]
         let extracted = contents.filter { imageExtensions.contains($0.pathExtension.lowercased()) }
             .sorted { $0.lastPathComponent < $1.lastPathComponent }
 
@@ -68,7 +70,8 @@ struct PDFImageExtractor {
                 )
                 let newURL = outputDirectory.appendingPathComponent(newName)
                 try fm.moveItem(at: file, to: newURL)
-                renamed.append(newURL)
+                // JBIG2 globals and CCITT parameters accompany an image; they are not images themselves.
+                if !["params", "jb2g"].contains(ext.lowercased()) { renamed.append(newURL) }
             }
         }
 

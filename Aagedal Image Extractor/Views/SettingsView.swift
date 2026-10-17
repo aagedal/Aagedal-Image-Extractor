@@ -57,10 +57,22 @@ struct SettingsView: View {
                         Text(format.displayName).tag(format)
                     }
                 }
-                .pickerStyle(.segmented)
+                .pickerStyle(.menu)
+                if viewModel.selectedFormat == .jpegXL {
+                    Text("Lossless compression. JPEG images remain reversible; other images retain their bit depth, color profile and transparency.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
             }
 
             Section("Dependencies") {
+                toolRow(
+                    name: "cjxl",
+                    url: viewModel.cjxlURL,
+                    purpose: "JPEG XL encoding",
+                    bundledAvailable: viewModel.cjxlBundledAvailable,
+                    homebrewAvailable: viewModel.cjxlHomebrewAvailable
+                )
                 toolRow(
                     name: "pdfimages",
                     url: viewModel.pdfimagesURL,
@@ -89,7 +101,7 @@ struct SettingsView: View {
                             .foregroundStyle(.secondary)
 
                         HStack {
-                            Text("brew install poppler exiftool")
+                            Text("brew install poppler exiftool jpeg-xl")
                                 .font(.system(.caption, design: .monospaced))
                                 .textSelection(.enabled)
 
@@ -98,7 +110,7 @@ struct SettingsView: View {
                             Button {
                                 NSPasteboard.general.clearContents()
                                 NSPasteboard.general.setString(
-                                    "brew install poppler exiftool", forType: .string
+                                    "brew install poppler exiftool jpeg-xl", forType: .string
                                 )
                             } label: {
                                 Image(systemName: "doc.on.doc")
@@ -115,7 +127,7 @@ struct SettingsView: View {
             }
         }
         .formStyle(.grouped)
-        .frame(width: 480, height: 520)
+        .frame(width: 480, height: 600)
         .onChange(of: viewModel.outputDestination) {
             viewModel.saveOutputDestination()
         }

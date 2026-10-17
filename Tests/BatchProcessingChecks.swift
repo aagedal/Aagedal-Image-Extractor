@@ -4,6 +4,7 @@ import Foundation
 // Batch checks never need conversion. Keep this runner independent of the JXL package;
 // an unexpected conversion indicates the active batch picked up the changed format.
 struct ImageConverter {
+    init(cjxlURL: URL? = nil) {}
     func convert(files: [URL], to format: ExportFormat, outputDirectory: URL,
                  progressHandler: @MainActor (Double) -> Void) async throws -> [URL] {
         throw AppError.conversionFailed("Batch format changed while extraction was suspended")
@@ -97,6 +98,28 @@ struct BatchProcessingChecks {
         precondition(!model.isProcessing)
         model.removeDocument(originalItems[0])
         precondition(!model.documents.contains { $0.id == originalItems[0].id })
+        // Original mode must bypass the converter even for images AppKit cannot decode.
+        let archiveRoot = root.appendingPathComponent("original-archive")
+        try fm.createDirectory(at: archiveRoot, withIntermediateDirectories: true)
+        let vectorBytes = Data("<svg xmlns=\"http://www.w3.org/2000/svg\"/>".utf8)
+        try vectorBytes.write(to: archiveRoot.appendingPathComponent("vector.svg"))
+        let archive = root.appendingPathComponent("vectors.zip")
+        let zip = try await runProcess(executableURL: URL(fileURLWithPath: "/usr/bin/zip"),
+            arguments: ["-q", archive.path, "vector.svg"], currentDirectoryURL: archiveRoot)
+        precondition(zip.exitCode == 0)
+        let originalModel = DocumentListViewModel()
+        originalModel.selectedFormat = .original
+        originalModel.outputDestination = .nextToOriginals
+        originalModel.ocrEnabled = false
+        originalModel.metadataConfiguration.metadataEnabled = false
+        originalModel.addDocuments(urls: [archive])
+        await originalModel.processAll()
+        let originalItem = originalModel.documents[0]
+        precondition(originalItem.state == .completed(imageCount: 1))
+        let vector = originalItem.outputDirectoryURL!.appendingPathComponent("vectors_I001.svg")
+        let exportedBytes = try Data(contentsOf: vector)
+        precondition(exportedBytes == vectorBytes)
+        print("Passed: original archive export bypasses raster conversion in the real batch pipeline.")
         print("Passed: batch settings snapshot, tool/output preservation, reentry guard, active removal guard, queued removal, deferred additions and busy-state reset.")
     }
 }

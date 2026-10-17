@@ -2,11 +2,11 @@
 set -euo pipefail
 
 # prepare-vendor.sh
-# One-time developer script that prepares bundled pdfimages and exiftool
+# One-time developer script that prepares bundled pdfimages, cjxl and exiftool
 # from the local Homebrew installation and exiftool.org.
 #
 # Usage: ./Scripts/prepare-vendor.sh
-# Output: vendor/pdfimages/ and vendor/exiftool/
+# Output: vendor/pdfimages/, vendor/cjxl/ and vendor/exiftool/
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
@@ -29,6 +29,11 @@ PDFIMAGES="$BREW_PREFIX/bin/pdfimages"
 if [[ ! -x "$PDFIMAGES" ]]; then
     echo "Error: pdfimages not found at $PDFIMAGES" >&2
     echo "Install it first: brew install poppler" >&2
+    exit 1
+fi
+
+if [[ ! -x "$BREW_PREFIX/bin/cjxl" ]]; then
+    echo "Error: cjxl not found. Install it first: brew install jpeg-xl" >&2
     exit 1
 fi
 
@@ -165,7 +170,12 @@ otool -L "$PDFIMAGES_BIN" | tail -n +2 | awk '{print $1}' | while read -r dep; d
 done
 
 # ---------------------------------------------------------------------------
-# Part 2: exiftool
+# Part 2: JPEG XL
+# ---------------------------------------------------------------------------
+python3 "$SCRIPT_DIR/prepare-jpeg-xl.py" --source "$BREW_PREFIX/bin/cjxl"
+
+# ---------------------------------------------------------------------------
+# Part 3: exiftool
 # ---------------------------------------------------------------------------
 echo "--- Downloading exiftool $EXIFTOOL_VERSION ---"
 TMPDIR_ET=$(mktemp -d)
