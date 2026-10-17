@@ -31,7 +31,7 @@ final class DocumentListViewModel {
     var pdfimagesAvailable: Bool { pdfimagesURL != nil }
     var hasDocuments: Bool { !documents.isEmpty }
     var hasPendingDocuments: Bool { documents.contains { $0.state == .pending } }
-    var isProcessing: Bool { documents.contains { $0.state.isProcessing } }
+    private(set) var isProcessing: Bool = false
 
     private static let metadataConfigKey = "MetadataConfiguration"
     private static let exportFormatKey = "ExportFormat"
@@ -97,6 +97,7 @@ final class DocumentListViewModel {
     }
 
     func removeDocument(_ item: DocumentItem) {
+        guard !item.state.isProcessing else { return }
         documents.removeAll { $0.id == item.id }
     }
 
@@ -141,20 +142,45 @@ final class DocumentListViewModel {
         isInstallingPoppler = false
     }
 
+    // Capture settings once so edits made while awaiting a tool apply to the next batch.
+    private struct BatchSettings {
+        let format: ExportFormat
+        let ocrEnabled: Bool
+        let metadata: MetadataConfiguration
+        let pdfimagesURL: URL?
+        let exiftoolURL: URL?
+        let outputDestination: OutputDestination
+        let customOutputDirectoryURL: URL?
+    }
+
     func processAll() async {
+        guard !isProcessing else { return }
+        isProcessing = true
+        defer { isProcessing = false }
+        let settings = BatchSettings(
+            format: selectedFormat,
+            ocrEnabled: ocrEnabled,
+            metadata: metadataConfiguration,
+            pdfimagesURL: pdfimagesURL,
+            exiftoolURL: exiftoolURL,
+            outputDestination: outputDestination,
+            customOutputDirectoryURL: customOutputDirectoryURL
+        )
         let pending = documents.filter { $0.state == .pending }
         for item in pending {
-            await processSingle(item)
+            // A queued document may have been removed while the previous one was running.
+            guard documents.contains(where: { $0.id == item.id }), item.state == .pending else { continue }
+            await processSingle(item, settings: settings)
         }
     }
 
-    private func processSingle(_ item: DocumentItem) async {
+    private func processSingle(_ item: DocumentItem, settings: BatchSettings) async {
         var outputDir: URL
-        switch outputDestination {
+        switch settings.outputDestination {
         case .nextToOriginals:
             outputDir = item.defaultOutputDirectory
         case .customDirectory:
-            guard let baseDir = customOutputDirectoryURL else {
+            guard let baseDir = settings.customOutputDirectoryURL else {
                 item.state = .failed(message: "No custom output directory selected")
                 return
             }
@@ -182,14 +208,14 @@ final class DocumentListViewModel {
 
             switch item.documentType {
             case .pdf:
-                guard let pdfimagesURL else {
+                guard let pdfimagesURL = settings.pdfimagesURL else {
                     throw AppError.pdfimagesNotFound
                 }
                 let extractor = PDFImageExtractor(pdfimagesURL: pdfimagesURL)
                 extractedFiles = try await extractor.extract(
                     pdfURL: item.sourceURL,
                     to: outputDir,
-                    format: selectedFormat,
+                    format: settings.format,
                     documentName: docStem
                 )
                 logger.info("Extracted \(extractedFiles.count) files from PDF")
@@ -210,7 +236,7 @@ final class DocumentListViewModel {
             }
 
             // Convert any files not already in the target format
-            let format = selectedFormat
+            let format = settings.format
             let needsConversion = extractedFiles.contains { file in
                 !format.matches(fileExtension: file.pathExtension)
             }
@@ -233,8 +259,8 @@ final class DocumentListViewModel {
             item.extractedImageCount = extractedFiles.count
 
             // Write IPTC metadata if enabled
-            if metadataConfiguration.metadataEnabled {
-                guard let exiftoolURL else {
+            if settings.metadata.metadataEnabled {
+                guard let exiftoolURL = settings.exiftoolURL else {
                     throw AppError.exiftoolNotFound
                 }
                 logger.info("Writing metadata to \(extractedFiles.count) files")
@@ -242,7 +268,7 @@ final class DocumentListViewModel {
                 let writer = MetadataWriter(exiftoolURL: exiftoolURL)
                 try await writer.writeMetadata(
                     to: extractedFiles,
-                    configuration: metadataConfiguration,
+                    configuration: settings.metadata,
                     documentFileName: item.fileName
                 ) { progress in
                     item.state = .writingMetadata(progress: progress)
@@ -251,7 +277,7 @@ final class DocumentListViewModel {
             }
 
             // OCR for PDFs if enabled
-            if ocrEnabled && item.documentType == .pdf {
+            if settings.ocrEnabled && item.documentType == .pdf {
                 logger.info("Starting OCR on \(item.fileName)")
                 item.state = .runningOCR(progress: 0)
                 let ocrService = OCRService()
