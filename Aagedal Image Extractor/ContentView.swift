@@ -27,7 +27,7 @@ struct ContentView: View {
         }
         .fileImporter(
             isPresented: $showFileImporter,
-            allowedContentTypes: [.pdf, UTType(filenameExtension: "docx")!],
+            allowedContentTypes: DocumentType.allowedContentTypes,
             allowsMultipleSelection: true
         ) { result in
             if case .success(let urls) = result {

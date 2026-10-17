@@ -3,7 +3,7 @@ import Foundation
 enum AppError: LocalizedError {
     case pdfimagesNotFound
     case pdfimagesExecutionFailed(stderr: String)
-    case invalidDocx(String)
+    case invalidArchive(String)
     case noImagesFound
     case conversionFailed(String)
     case ocrFailed(String)
@@ -18,8 +18,8 @@ enum AppError: LocalizedError {
             "pdfimages not found. Please reinstall the application."
         case .pdfimagesExecutionFailed(let stderr):
             "pdfimages failed: \(stderr)"
-        case .invalidDocx(let detail):
-            "Invalid DOCX file: \(detail)"
+        case .invalidArchive(let detail):
+            "Cannot read document archive: \(detail)"
         case .noImagesFound:
             "No images found in the document"
         case .conversionFailed(let detail):

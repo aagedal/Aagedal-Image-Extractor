@@ -12,7 +12,11 @@ struct PDFImageExtractor {
         let fm = FileManager.default
         try fm.createDirectory(at: outputDirectory, withIntermediateDirectories: true)
 
-        let root = outputDirectory.appendingPathComponent("image").path
+        // Keep each run isolated so existing output never becomes input to a later run.
+        let tempDir = fm.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try fm.createDirectory(at: tempDir, withIntermediateDirectories: true)
+        defer { try? fm.removeItem(at: tempDir) }
+        let root = tempDir.appendingPathComponent("image").path
 
         var arguments = ["-p"]
 
@@ -22,7 +26,7 @@ struct PDFImageExtractor {
             arguments += ["-j", "-png"]
         case .tiff:
             arguments += ["-tiff"]
-        case .jpegXL:
+        case .png, .jpegXL:
             // Extract as PNG first, then convert to JXL
             arguments += ["-png"]
         }
@@ -39,7 +43,7 @@ struct PDFImageExtractor {
         }
 
         let contents = try fm.contentsOfDirectory(
-            at: outputDirectory,
+            at: tempDir,
             includingPropertiesForKeys: nil
         )
 
@@ -62,11 +66,9 @@ struct PDFImageExtractor {
                     format: "%@_P%03d_I%03d.%@",
                     documentName, page, imageIndex, ext
                 )
-                let newURL = file.deletingLastPathComponent().appendingPathComponent(newName)
+                let newURL = outputDirectory.appendingPathComponent(newName)
                 try fm.moveItem(at: file, to: newURL)
                 renamed.append(newURL)
-            } else {
-                renamed.append(file)
             }
         }
 

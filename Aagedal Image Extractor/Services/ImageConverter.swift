@@ -13,10 +13,8 @@ struct ImageConverter {
         let total = Double(files.count)
 
         for (index, file) in files.enumerated() {
-            let ext = file.pathExtension.lowercased()
-
             // Skip if already in target format
-            if isMatchingFormat(ext: ext, format: format) {
+            if format.matches(fileExtension: file.pathExtension) {
                 outputURLs.append(file)
                 progressHandler(Double(index + 1) / total)
                 continue
@@ -36,14 +34,6 @@ struct ImageConverter {
         }
 
         return outputURLs
-    }
-
-    private func isMatchingFormat(ext: String, format: ExportFormat) -> Bool {
-        switch format {
-        case .jpeg: ext == "jpg" || ext == "jpeg"
-        case .tiff: ext == "tiff" || ext == "tif"
-        case .jpegXL: ext == "jxl"
-        }
     }
 
     nonisolated private func convertFile(
@@ -69,6 +59,8 @@ struct ImageConverter {
                 using: .lzw,
                 factor: 0
             )
+        case .png:
+            outputData = imageRep.representation(using: .png, properties: [:])
         case .jpegXL:
             guard let cgImage = imageRep.cgImage else {
                 throw AppError.conversionFailed(
@@ -88,6 +80,6 @@ struct ImageConverter {
             )
         }
 
-        try finalData.write(to: output)
+        try finalData.write(to: output, options: .atomic)
     }
 }

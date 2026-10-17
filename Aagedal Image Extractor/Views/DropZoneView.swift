@@ -11,8 +11,12 @@ struct DropZoneView: View {
                 .font(.system(size: 48))
                 .foregroundStyle(.secondary)
 
-            Text("Drop PDF or DOCX files here")
+            Text("Drop PDF, Office or OpenDocument files here")
                 .font(.title3)
+                .foregroundStyle(.secondary)
+
+            Text("PDF · DOCX · PPTX · XLSX · ODT · ODP · ODS")
+                .font(.caption)
                 .foregroundStyle(.secondary)
 
             if !pdfimagesAvailable {
