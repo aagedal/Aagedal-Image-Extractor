@@ -31,3 +31,20 @@ if [[ $# -gt 0 ]]; then
         -lc++ -framework Accelerate -o "$TEST_DIR/raster-checks"
     "$TEST_DIR/raster-checks" "$(command -v exiftool || true)"
 fi
+
+# Exercise the real batch pipeline with a controlled pdfimages subprocess, without JXL.
+swiftc -parse-as-library -default-isolation MainActor -module-cache-path "$TEST_DIR/modules" \
+    "$SOURCES"/Models/*.swift \
+    "$SOURCES/Services/ProcessRunner.swift" \
+    "$SOURCES/Services/ArchiveImageExtractor.swift" \
+    "$SOURCES/Services/PDFImageExtractor.swift" \
+    "$SOURCES/Services/MetadataWriter.swift" \
+    "$SOURCES/Services/OCRService.swift" \
+    "$SOURCES/Services/SearchablePDFBuilder.swift" \
+    "$SOURCES/Services/PdfImagesLocator.swift" \
+    "$SOURCES/Services/ExiftoolLocator.swift" \
+    "$SOURCES/Services/HomebrewService.swift" \
+    "$SOURCES/ViewModels/DocumentListViewModel.swift" \
+    "$PROJECT_DIR/Tests/BatchProcessingChecks.swift" \
+    -o "$TEST_DIR/batch-checks"
+"$TEST_DIR/batch-checks"

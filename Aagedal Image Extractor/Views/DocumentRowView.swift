@@ -51,6 +51,7 @@ struct DocumentRowView: View {
             }
             .buttonStyle(.borderless)
             .help("Remove")
+            .disabled(item.state.isProcessing)
         }
         .padding(.vertical, 4)
     }
