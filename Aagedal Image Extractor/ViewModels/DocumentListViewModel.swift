@@ -51,7 +51,7 @@ final class DocumentListViewModel {
             metadataConfiguration = saved
         }
         if let raw = defaults.string(forKey: Self.exportFormatKey),
-           let saved = ExportFormat(rawValue: raw) {
+           let saved = ExportFormat(rawValue: raw), ExportFormat.availableCases.contains(saved) {
             selectedFormat = saved
         }
         if let raw = defaults.string(forKey: Self.outputDestinationKey),
@@ -149,7 +149,7 @@ final class DocumentListViewModel {
     }
 
     private func processSingle(_ item: DocumentItem) async {
-        let outputDir: URL
+        var outputDir: URL
         switch outputDestination {
         case .nextToOriginals:
             outputDir = item.defaultOutputDirectory
@@ -161,11 +161,21 @@ final class DocumentListViewModel {
             let docStem = item.sourceURL.deletingPathExtension().lastPathComponent
             outputDir = baseDir.appendingPathComponent("\(docStem)_images")
         }
-        item.outputDirectoryURL = outputDir
         item.state = .extracting(progress: 0)
         logger.info("Starting processing: \(item.fileName)")
 
         do {
+            // Preserve previous exports, including documents with the same stem in a batch.
+            let baseOutputDir = outputDir
+            var suffix = 2
+            while FileManager.default.fileExists(atPath: outputDir.path) {
+                outputDir = baseOutputDir.deletingLastPathComponent().appendingPathComponent(
+                    baseOutputDir.lastPathComponent + "_\(suffix)"
+                )
+                suffix += 1
+            }
+            try FileManager.default.createDirectory(at: outputDir, withIntermediateDirectories: true)
+            item.outputDirectoryURL = outputDir
             var extractedFiles: [URL]
 
             let docStem = item.sourceURL.deletingPathExtension().lastPathComponent
@@ -183,14 +193,14 @@ final class DocumentListViewModel {
                     documentName: docStem
                 )
                 logger.info("Extracted \(extractedFiles.count) files from PDF")
-            case .docx:
-                let extractor = DOCXImageExtractor()
+            case .docx, .pptx, .xlsx, .odt, .odp, .ods:
+                let extractor = ArchiveImageExtractor()
                 extractedFiles = try await extractor.extract(
-                    docxURL: item.sourceURL,
+                    documentURL: item.sourceURL,
                     to: outputDir,
                     documentName: docStem
                 )
-                logger.info("Extracted \(extractedFiles.count) files from DOCX")
+                logger.info("Extracted \(extractedFiles.count) files from document archive")
             }
 
             item.state = .extracting(progress: 1.0)
@@ -202,12 +212,7 @@ final class DocumentListViewModel {
             // Convert any files not already in the target format
             let format = selectedFormat
             let needsConversion = extractedFiles.contains { file in
-                let ext = file.pathExtension.lowercased()
-                switch format {
-                case .jpeg: return ext != "jpg" && ext != "jpeg"
-                case .tiff: return ext != "tiff" && ext != "tif"
-                case .jpegXL: return ext != "jxl"
-                }
+                !format.matches(fileExtension: file.pathExtension)
             }
             if needsConversion {
                 logger.info("Converting \(extractedFiles.count) files to \(format.displayName)")

@@ -1,21 +1,40 @@
 import Foundation
+import UniformTypeIdentifiers
 
-enum DocumentType {
+enum DocumentType: String, CaseIterable {
     case pdf
     case docx
+    case pptx
+    case xlsx
+    case odt
+    case odp
+    case ods
 
     init?(url: URL) {
-        switch url.pathExtension.lowercased() {
-        case "pdf": self = .pdf
-        case "docx": self = .docx
-        default: return nil
+        self.init(rawValue: url.pathExtension.lowercased())
+    }
+
+    static var allowedContentTypes: [UTType] {
+        allCases.compactMap { UTType(filenameExtension: $0.rawValue) }
+    }
+
+    /// Only extract embedded media, excluding previews, attachments and macros.
+    var mediaDirectory: String? {
+        switch self {
+        case .pdf: nil
+        case .docx: "word/media"
+        case .pptx: "ppt/media"
+        case .xlsx: "xl/media"
+        case .odt, .odp, .ods: "Pictures"
         }
     }
 
     var icon: String {
         switch self {
         case .pdf: "doc.richtext"
-        case .docx: "doc.text"
+        case .docx, .odt: "doc.text"
+        case .pptx, .odp: "rectangle.on.rectangle"
+        case .xlsx, .ods: "tablecells"
         }
     }
 }
