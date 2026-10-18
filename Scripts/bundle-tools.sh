@@ -55,6 +55,11 @@ if [[ -d "$VENDOR_DIR/pdfimages" ]]; then
         sign_binary "$dylib"
     done
     sign_binary "$HELPERS_DIR/pdfimages"
+    if [[ -d "$VENDOR_DIR/pdfimages/licenses" ]]; then
+        mkdir -p "$RESOURCES_DIR"
+        rm -rf "$RESOURCES_DIR/poppler-licenses"
+        cp -R "$VENDOR_DIR/pdfimages/licenses" "$RESOURCES_DIR/poppler-licenses"
+    fi
 fi
 
 # --- cjxl (Mach-O) → Contents/Helpers/ ---
