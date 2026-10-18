@@ -60,6 +60,11 @@ struct BatchProcessingChecks {
             preconditionFailure("Extraction did not start")
         }
         precondition(model.isProcessing)
+        originalItems[1].state = .failed(message: "Controlled failure")
+        model.retryDocument(originalItems[1])
+        precondition(originalItems[1].state == .failed(message: "Controlled failure"),
+                     "Retry must not alter an active batch")
+        originalItems[1].state = .pending
         model.selectedFormat = .tiff
         model.ocrEnabled = true
         model.metadataConfiguration.metadataEnabled = true
@@ -96,6 +101,24 @@ struct BatchProcessingChecks {
             preconditionFailure("The next batch should use the updated missing-tool setting")
         }
         precondition(!model.isProcessing)
+        let failedItem = model.documents.last!
+        let previousOutput = failedItem.outputDirectoryURL!
+        let marker = previousOutput.appendingPathComponent("partial.txt")
+        try Data("preserve partial output".utf8).write(to: marker)
+        failedItem.extractedImageCount = 9
+        model.retryDocument(failedItem)
+        precondition(failedItem.state == .pending && failedItem.extractedImageCount == 0)
+        precondition(failedItem.outputDirectoryURL == previousOutput, "Partial output stays accessible while queued")
+        model.pdfimagesURL = tool
+        model.selectedFormat = .original
+        model.ocrEnabled = false
+        model.metadataConfiguration.metadataEnabled = false
+        await model.processAll()
+        precondition(failedItem.state == .completed(imageCount: 1), "Retry uses updated settings")
+        precondition(failedItem.outputDirectoryURL != previousOutput, "Retry must use a fresh directory")
+        precondition(fm.fileExists(atPath: marker.path), "Retry preserves partial output from the previous attempt")
+        model.retryDocument(failedItem)
+        precondition(failedItem.state == .completed(imageCount: 1), "Completed documents cannot be retried")
         model.removeDocument(originalItems[0])
         precondition(!model.documents.contains { $0.id == originalItems[0].id })
         // Original mode must bypass the converter even for images AppKit cannot decode.
@@ -119,6 +142,18 @@ struct BatchProcessingChecks {
         let vector = originalItem.outputDirectoryURL!.appendingPathComponent("vectors_I001.svg")
         let exportedBytes = try Data(contentsOf: vector)
         precondition(exportedBytes == vectorBytes)
+        let importModel = DocumentListViewModel()
+        let importURLs = (0..<2000).map { root.appendingPathComponent("import-\($0).pdf") }
+        importModel.addDocuments(urls: importURLs + importURLs)
+        importModel.addDocuments(urls: [root.appendingPathComponent("nested/../import-0.pdf"), root.appendingPathComponent("unsupported.txt")])
+        precondition(importModel.documents.map(\.sourceURL) == importURLs,
+                     "Large imports preserve order, reject unsupported files and deduplicate equivalent paths")
+        let removed = importModel.documents[0]
+        importModel.removeDocument(removed)
+        removed.state = .failed(message: "Removed")
+        importModel.retryDocument(removed)
+        precondition(removed.state == .failed(message: "Removed"), "Removed items cannot be queued again")
+        print("Passed: retry guards, changed settings, partial output preservation and 2,000-file import deduplication.")
         print("Passed: original archive export bypasses raster conversion in the real batch pipeline.")
         print("Passed: batch settings snapshot, tool/output preservation, reentry guard, active removal guard, queued removal, deferred additions and busy-state reset.")
     }

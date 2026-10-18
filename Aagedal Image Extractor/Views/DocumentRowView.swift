@@ -4,6 +4,8 @@ struct DocumentRowView: View {
     let item: DocumentItem
     let onReveal: () -> Void
     let onRemove: () -> Void
+    let onRetry: () -> Void
+    let canRetry: Bool
 
     var body: some View {
         HStack(spacing: 12) {
@@ -16,6 +18,7 @@ struct DocumentRowView: View {
                 Text(item.fileName)
                     .font(.body)
                     .lineLimit(1)
+                    .help(item.sourceURL.path)
 
                 if item.state.isProcessing {
                     ProgressView(value: item.state.progressValue)
@@ -37,12 +40,23 @@ struct DocumentRowView: View {
                     .background(.blue.opacity(0.15), in: Capsule())
             }
 
-            if item.state.isFinished {
+            if case .failed = item.state {
+                Button(action: onRetry) {
+                    Image(systemName: "arrow.clockwise")
+                }
+                .buttonStyle(.borderless)
+                .help("Queue for retry with current settings, then click Extract")
+                .accessibilityLabel("Retry \(item.fileName)")
+                .disabled(!canRetry)
+            }
+
+            if item.outputDirectoryURL != nil {
                 Button(action: onReveal) {
                     Image(systemName: "folder")
                 }
                 .buttonStyle(.borderless)
                 .help("Reveal in Finder")
+                .accessibilityLabel("Reveal output for \(item.fileName)")
             }
 
             Button(action: onRemove) {

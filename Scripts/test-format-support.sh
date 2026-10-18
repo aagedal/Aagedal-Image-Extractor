@@ -56,3 +56,10 @@ swiftc -parse-as-library -default-isolation MainActor -module-cache-path "$TEST_
     "$PROJECT_DIR/Tests/BatchProcessingChecks.swift" \
     -o "$TEST_DIR/batch-checks"
 "$TEST_DIR/batch-checks"
+
+# Metadata resolution and optional real ExifTool round trip need no JPEG XL package.
+swiftc -parse-as-library -default-isolation MainActor -module-cache-path "$TEST_DIR/modules" \
+    "$SOURCES/Models/AppError.swift" "$SOURCES/Models/MetadataConfiguration.swift" \
+    "$SOURCES/Services/ProcessRunner.swift" "$SOURCES/Services/MetadataWriter.swift" \
+    "$PROJECT_DIR/Tests/MetadataChecks.swift" -o "$TEST_DIR/metadata-checks"
+"$TEST_DIR/metadata-checks" "$(command -v exiftool || true)"

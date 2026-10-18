@@ -94,9 +94,10 @@ final class DocumentListViewModel {
     }
 
     func addDocuments(urls: [URL]) {
+        var knownURLs = Set(documents.map { $0.sourceURL.standardizedFileURL })
         for url in urls {
-            guard let type = DocumentType(url: url) else { continue }
-            guard !documents.contains(where: { $0.sourceURL == url }) else { continue }
+            guard let type = DocumentType(url: url),
+                  knownURLs.insert(url.standardizedFileURL).inserted else { continue }
             documents.append(DocumentItem(sourceURL: url, documentType: type))
         }
     }
@@ -104,6 +105,14 @@ final class DocumentListViewModel {
     func removeDocument(_ item: DocumentItem) {
         guard !item.state.isProcessing else { return }
         documents.removeAll { $0.id == item.id }
+    }
+
+    func retryDocument(_ item: DocumentItem) {
+        guard !isProcessing, documents.contains(where: { $0.id == item.id }),
+              case .failed = item.state else { return }
+        // Keep the previous folder available until the next attempt creates a fresh one.
+        item.extractedImageCount = 0
+        item.state = .pending
     }
 
     func clearFinished() {
