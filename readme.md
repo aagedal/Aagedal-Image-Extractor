@@ -22,9 +22,10 @@ brew install aagedal/casks/aagedal-image-extractor
 - **Other inputs**: EPUB, ZIP, CBZ, RTF, RTFD, plus legacy DOC/PPT/XLS with LibreOffice installed
 - **Export formats**: Keep original format, JPEG, TIFF, PNG (preserves transparency), lossless JPEG XL
 - **OCR**: Generate a searchable PDF alongside extracted images (macOS Vision framework)
-- **IPTC metadata**: Write heading, description, keywords, and copyright fields to extracted images via exiftool
+- **Image metadata**: Write headline, description, accessibility description, keywords, and copyright via ExifTool, with a live example in settings
 - **Output options**: Save next to originals or to a custom directory
 - **Consistent batches**: Export format, OCR, metadata, tools, and output destination are captured when extraction starts; settings changes apply to the next batch. Remove queued documents to skip them, and add documents for the next batch.
+- **Retry failed documents**: Click the retry arrow, adjust settings if needed, then click Extract. Each attempt uses a fresh output folder and preserves earlier partial exports.
 - **Preserve previous exports**: Repeated exports and documents with matching names receive separate numbered output folders
 - **Bundled tools**: Ships with pdfimages, cjxl and exiftool — no manual installation required
 - **Homebrew override**: Optionally use Homebrew-installed versions of pdfimages and exiftool instead of the bundled copies
@@ -55,6 +56,18 @@ For PDF original-format export, `pdfimages -all` preserves JPEG, JPEG 2000, JBIG
 
 Run `Scripts/test-format-support.sh` for standalone format, extraction, and batch-processing regression checks, including real RTF/RTFD fixtures and a controlled LibreOffice conversion boundary. Requires Xcode command line tools; no bundled tools or package downloads needed.
 Install `jpeg-xl` and pass the path to an existing Xcode Debug derived data directory to also test PNG conversion, original-byte preservation, JPEG reconstruction, 16-bit Display P3 fidelity, encoder failures, and transparency, for example `Scripts/test-format-support.sh /tmp/aagedal-image-extractor-build`.
+
+## Metadata behavior
+
+Enable **Metadata** in the toolbar, then select the fields to write. The example uses `Example.pdf`, page 3, and updates as you edit. **Include document name** uses the full source filename, including its extension. **Before/After** controls whether custom text precedes or follows that name. Extended Description adds a page number for extracted PDF images; other inputs include only the filename.
+
+Headline writes XMP `photoshop:Headline` and IPTC `Headline`. Description writes XMP `dc:Description` and IPTC `Caption-Abstract`. Copyright writes XMP `dc:Rights` and IPTC `CopyrightNotice`. Keywords writes XMP `dc:Subject` and IPTC `Keywords`. Extended Description writes XMP IPTC Core `ExtDescrAccessibility`. See the [ExifTool XMP tag reference](https://exiftool.org/TagNames/XMP.html) for the underlying fields.
+
+JPEG XL receives XMP fields only. Other formats receive both XMP and IPTC requests; which fields can be stored depends on the image format and ExifTool support. Metadata writing happens after format conversion and modifies the exported images, including **Keep original format** exports. Source documents are never modified.
+
+Disabled fields and fields with no generated or custom text leave existing metadata unchanged. Nonempty text fields replace their corresponding values. Keywords are split on commas or semicolons, trimmed, and empty entries discarded; the resulting list replaces existing keywords. Whitespace-only custom text is ignored. No metadata is written when the master Enable switch is off. Changes made during extraction apply to the next batch.
+
+`Scripts/test-format-support.sh` also checks metadata resolution and preview values. When `exiftool` is available on `PATH`, it verifies XMP/IPTC values against a real exported JPEG, including keyword replacement and preservation of unchanged fields.
 
 ## Acknowledgements
 

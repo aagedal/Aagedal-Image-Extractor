@@ -13,7 +13,9 @@ struct ContentView: View {
                 DocumentListView(
                     documents: viewModel.documents,
                     onReveal: { viewModel.revealInFinder($0) },
-                    onRemove: { viewModel.removeDocument($0) }
+                    onRemove: { viewModel.removeDocument($0) },
+                    onRetry: { viewModel.retryDocument($0) },
+                    isProcessing: viewModel.isProcessing
                 )
             } else if !viewModel.pdfimagesAvailable && !viewModel.setupDismissed {
                 SetupGuideView(viewModel: viewModel)
@@ -84,7 +86,7 @@ struct ContentView: View {
                 } label: {
                     Label("Metadata", systemImage: viewModel.metadataConfiguration.metadataEnabled ? "tag.fill" : "tag")
                 }
-                .help("IPTC Metadata Settings")
+                .help("Image Metadata Settings")
                 .foregroundStyle(viewModel.metadataConfiguration.metadataEnabled ? Color.accentColor : .secondary)
             }
             ToolbarItem {
