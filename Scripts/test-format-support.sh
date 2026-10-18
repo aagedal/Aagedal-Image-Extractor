@@ -13,8 +13,11 @@ swiftc -parse-as-library -module-cache-path "$TEST_DIR/modules" \
     "$SOURCES/Services/ArchiveImageExtractor.swift" \
     "$SOURCES/Services/RichTextImageExtractor.swift" \
     "$SOURCES/Services/RTFImageParser.swift" \
+    "$SOURCES/Services/CompoundDocument.swift" \
+    "$SOURCES/Services/OfficeArtImageParser.swift" \
     "$SOURCES/Services/LegacyOfficeImageExtractor.swift" \
     "$SOURCES/Services/PDFImageExtractor.swift" \
+    "$PROJECT_DIR/Tests/LegacyOfficeChecks.swift" \
     "$PROJECT_DIR/Tests/FormatSupportChecks.swift" \
     -o "$TEST_DIR/format-checks"
 "$TEST_DIR/format-checks"
@@ -43,6 +46,8 @@ swiftc -parse-as-library -default-isolation MainActor -module-cache-path "$TEST_
     "$SOURCES/Services/ArchiveImageExtractor.swift" \
     "$SOURCES/Services/RichTextImageExtractor.swift" \
     "$SOURCES/Services/RTFImageParser.swift" \
+    "$SOURCES/Services/CompoundDocument.swift" \
+    "$SOURCES/Services/OfficeArtImageParser.swift" \
     "$SOURCES/Services/LegacyOfficeImageExtractor.swift" \
     "$SOURCES/Services/PDFImageExtractor.swift" \
     "$SOURCES/Services/MetadataWriter.swift" \

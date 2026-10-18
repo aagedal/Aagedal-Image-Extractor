@@ -2,7 +2,6 @@ import Foundation
 
 enum AppError: LocalizedError {
     case cjxlNotFound
-    case libreOfficeNotFound
     case pdfimagesNotFound
     case pdfimagesExecutionFailed(stderr: String)
     case invalidArchive(String)
@@ -18,8 +17,6 @@ enum AppError: LocalizedError {
         switch self {
         case .cjxlNotFound:
             "JPEG XL encoding requires cjxl. Reinstall the application or run brew install jpeg-xl, then refresh dependencies."
-        case .libreOfficeNotFound:
-            "Legacy DOC, PPT and XLS files require LibreOffice. Install LibreOffice in Applications (or run brew install --cask libreoffice), then retry."
         case .pdfimagesNotFound:
             "pdfimages not found. Please reinstall the application."
         case .pdfimagesExecutionFailed(let stderr):

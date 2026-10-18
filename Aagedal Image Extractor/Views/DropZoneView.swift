@@ -19,10 +19,6 @@ struct DropZoneView: View {
                 .font(.caption)
                 .foregroundStyle(.secondary)
 
-            Text("Legacy DOC, PPT and XLS require LibreOffice in Applications.")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-
             if !pdfimagesAvailable {
                 Label(
                     "pdfimages not found — please reinstall the application",
