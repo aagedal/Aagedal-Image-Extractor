@@ -10,8 +10,7 @@ A macOS app for batch extracting embedded images from PDF, Microsoft Office, Ope
 brew install aagedal/casks/aagedal-image-extractor
 ```
 #### Latest release
-[Version 1.1.0
-](https://github.com/aagedal/Aagedal-Image-Extractor/releases/download/v.1.1.0/Aagedal-Image-Extractor_1-1-0.zip)
+[Version 1.2.0](https://github.com/aagedal/Aagedal-Image-Extractor/releases/download/v.1.2.0/Aagedal-Image-Extractor_1-2-0.zip)
 
 
 ## Features
@@ -33,6 +32,7 @@ brew install aagedal/casks/aagedal-image-extractor
 ## Requirements
 
 - macOS 15.0 or later
+- The prebuilt release is for Apple silicon Macs.
 
 ## Building from Source
 
