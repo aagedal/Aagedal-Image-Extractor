@@ -189,30 +189,7 @@ struct FormatSupportChecks {
             throw CheckFailure(message: "Expected invalid RTF binary payload failure")
         } catch AppError.conversionFailed {}
 
-        // Fake only the LibreOffice boundary; use real archive extraction on its converted output.
-        let office = root.appendingPathComponent("soffice")
-        try Data("""
-        #!/bin/sh
-        for arg do
-            if [ "$previous" = "--outdir" ]; then output="$arg"; fi
-            if [ "$previous" = "--convert-to" ]; then target="$arg"; fi
-            previous="$arg"
-        done
-        cp '\(root.path)'/Fixture."$target" "$output/legacy.$target"
-        """.utf8).write(to: office)
-        try fm.setAttributes([.posixPermissions: 0o755], ofItemAtPath: office.path)
-        for ext in ["doc", "ppt", "xls"] {
-            let legacyFiles = try await LegacyOfficeImageExtractor().extract(
-                documentURL: root.appendingPathComponent("legacy.\(ext)"),
-                to: root.appendingPathComponent("legacy-output-\(ext)"), documentName: "legacy", libreOfficeURL: office)
-            try check(legacyFiles.count == 3, "Legacy Office conversion feeds archive extraction: \(ext)")
-        }
-        try Data("#!/bin/sh\nexit 0\n".utf8).write(to: office)
-        do {
-            _ = try await LegacyOfficeImageExtractor().extract(documentURL: root.appendingPathComponent("legacy.ppt"),
-                to: root.appendingPathComponent("failed-legacy"), documentName: "legacy", libreOfficeURL: office)
-            throw CheckFailure(message: "Expected missing conversion output failure")
-        } catch AppError.conversionFailed {}
+        try await LegacyOfficeChecks.run(root: root, png: imageData)
 
         // A controlled pdfimages stand-in exercises naming and isolation without Poppler installed.
         let tool = root.appendingPathComponent("pdfimages")
@@ -264,6 +241,6 @@ struct FormatSupportChecks {
         try check(fm.fileExists(atPath: originalOutput.appendingPathComponent("test_P003_I003.params").path), "Preserve CCITT parameters")
         try check(ExportFormat.original.matches(fileExtension: "anything"), "Original mode skips all conversion")
         try check(ExportFormat.availableCases.contains(.jpegXL), "Expose JPEG XL")
-        print("Passed: 29 input types, Office layouts, nested ZIP/CBZ, EPUB manifests, RTF hex/binary pictures, RTFD attachments, legacy conversion boundaries, symlink/path checks, archive failures, original PDF companion files and process isolation.")
+        print("Passed: 29 input types, Office layouts, nested ZIP/CBZ, EPUB manifests, RTF hex/binary pictures, RTFD attachments, native legacy Office records, symlink/path checks, archive failures, original PDF companion files and process isolation.")
     }
 }

@@ -18,7 +18,7 @@ brew install --cask aagedal/tap/aagedal-image-extractor
 - **Drag-and-drop** documents, ebooks, rich-text packages, and image archives for processing
 - **Office**: DOCX/DOCM/DOTX/DOTM, PPTX/PPTM/POTX/POTM/PPSX/PPSM, XLSX/XLSM/XLTX/XLTM
 - **OpenDocument**: ODT/ODP/ODS and OTT/OTP/OTS templates
-- **Other inputs**: EPUB, ZIP, CBZ, RTF, RTFD, plus legacy DOC/PPT/XLS with LibreOffice installed
+- **Other inputs**: EPUB, ZIP, CBZ, RTF, RTFD, plus native legacy DOC/PPT/XLS extraction
 - **Export formats**: Keep original format, JPEG, TIFF, PNG (preserves transparency), lossless JPEG XL
 - **OCR**: Generate a searchable PDF alongside extracted images (macOS Vision framework)
 - **Image metadata**: Write headline, description, accessibility description, keywords, and copyright via ExifTool, with a live example in settings
@@ -46,7 +46,9 @@ Office and OpenDocument extraction reads embedded image files, including media i
 
 RTF extraction reads standard hex and binary picture payloads (PNG, JPEG, EMF, WMF, PICT and DIB). RTFD imports image attachments using macOS; non-image attachments are ignored. Some RTF documents include multiple representations of a picture, which may be exported separately. Raster conversion depends on macOS image decoding; embedded vector formats such as EMF and WMF, and raw DIB payloads, may fail conversion with an image-specific error. Choose **Keep original format** to retain those image files without raster conversion. Metadata writing, when enabled, still modifies exported files and depends on ExifTool support for their formats. OCR is available for PDF inputs only.
 
-Legacy DOC/PPT/XLS support requires **LibreOffice**, installed in `/Applications` or `~/Applications` (or `soffice` in `/opt/homebrew/bin` or `/usr/local/bin`). Install it with `brew install --cask libreoffice` or the LibreOffice installer. The app uses a private temporary LibreOffice profile, converts to DOCX/PPTX/XLSX, and extracts the resulting embedded images. Conversion may change image representations; original-format output preserves the converted images rather than guaranteeing the legacy source bytes. LibreOffice is not bundled.
+Legacy DOC/PPT/XLS extraction is native and requires no LibreOffice installation. It reads Office 97–2003 compound documents (Word 97+, PowerPoint Pictures streams, and Excel BIFF8 drawing groups), including mini streams and split Excel drawing records. Supported OfficeArt images are JPEG, PNG, TIFF, DIB, EMF, WMF and PICT; compressed metafiles are decompressed without rendering. **Keep original format** preserves stored raster payloads and uncompressed metafile data. Raster conversion of vector images and DIB depends on macOS decoding support, as with RTF. Duplicate image payloads are exported once per document.
+
+Native legacy extraction reads stored image records rather than document layout or usage references, so stored but unused images and alternate representations may also be exported. It does not render charts, shapes, pages or slides, retrieve linked images, or extract images from embedded documents. Password-encrypted files, pre-97 binary formats, and non-compound files renamed to DOC/PPT/XLS are unsupported. Metafiles larger than 128 MiB uncompressed are rejected. All document formats work offline using the app and its bundled tools.
 
 JPEG XL uses the reference **cjxl** encoder with lossless compression (distance 0, effort 7, up to 8 threads). JPEG inputs, including JPEGs embedded in PDFs, use reversible JPEG recompression: exporting a resulting JXL back to JPEG reconstructs the original JPEG bytes when reconstruction data is available. PNG inputs go directly to cjxl; other supported single-frame integer RGB/grayscale images use an ImageIO PNG intermediate that retains up to 16-bit samples, transparency and embedded ICC profiles. Floating-point, CMYK intermediates, and multi-page images are rejected rather than silently reducing their fidelity; choose original-format export for these. PNG animation is passed through to cjxl. Container-specific source metadata may not survive the PNG intermediate, and enabled metadata writing can change exported metadata.
 
@@ -54,7 +56,7 @@ The encoder is bundled for release builds and can be overridden with Homebrew (`
 
 For PDF original-format export, `pdfimages -all` preserves JPEG, JPEG 2000, JBIG2 and CCITT encodings where available; other images are decoded to PNG/TIFF. JBIG2 globals (`.jb2g`) and CCITT parameter files (`.params`) are saved alongside their images and are not counted as additional images. Original format therefore means the extraction tool's native output, not a promise that every PDF image has a standalone original file.
 
-Run `Scripts/test-format-support.sh` for standalone format, extraction, and batch-processing regression checks, including real RTF/RTFD fixtures and a controlled LibreOffice conversion boundary. Requires Xcode command line tools; no bundled tools or package downloads needed.
+Run `Scripts/test-format-support.sh` for standalone format, extraction, and batch-processing regression checks, including real RTF/RTFD fixtures and native legacy Office binary fixtures. Requires Xcode command line tools; no bundled tools or package downloads needed.
 Install `jpeg-xl` and pass the path to an existing Xcode Debug derived data directory to also test PNG conversion, original-byte preservation, JPEG reconstruction, 16-bit Display P3 fidelity, encoder failures, and transparency, for example `Scripts/test-format-support.sh /tmp/aagedal-image-extractor-build`.
 
 ## Metadata behavior
